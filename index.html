@@ -8,7 +8,6 @@
 <!-- 第三方库导入 -->
 <script src="https://image.uc.cn/s/uae/g/3n/mos-production/fontawesome-free-7.1.0-web/js/all.min.js"></script>
 <script src="https://image.uc.cn/s/uae/g/3n/mos-production/0915/3.4.17.js"></script>
-<script src="https://image.uc.cn/s/uae/g/3n/mos-production/0915/echarts.min.js"></script>
 <style>
         /* 自定义滚动条 */
         ::-webkit-scrollbar {
@@ -161,10 +160,10 @@
 <button class="text-2xl text-gray-600" onclick="toggleSidebar()">
 <i class="fas fa-bars"></i>
 </button>
-<div class="flex items-center gap-2">
+<button class="flex items-center gap-2 hover:opacity-80 transition" onclick="goHome()" title="返回系统首页" type="button">
 <i class="fas fa-network-wired text-primary text-xl"></i>
 <h1 class="text-lg font-bold">ZIPC系统</h1>
-</div>
+</button>
 </div>
 <div class="flex items-center gap-3">
 <div class="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center">
@@ -177,7 +176,7 @@
 <!-- 左侧导航栏 -->
 <aside class="sidebar-transition bg-white border-r border-gray-200 w-64 flex flex-col h-full z-20 fixed md:relative md:translate-x-0 -translate-x-full md:flex" id="sidebar">
 <!-- Logo区域 -->
-<div class="p-5 border-b border-gray-100 flex items-center gap-3">
+<button class="p-5 border-b border-gray-100 flex items-center gap-3 text-left hover:bg-gray-50 transition" onclick="goHome()" title="返回系统首页" type="button">
 <div class="w-10 h-10 bg-primary text-white rounded-lg flex items-center justify-center">
 <i class="fas fa-network-wired text-lg"></i>
 </div>
@@ -185,7 +184,7 @@
 <h2 class="font-bold text-gray-800 text-lg">ZIPC系统</h2>
 <p class="text-xs text-gray-500">状态变迁矩阵与知识管理</p>
 </div>
-</div>
+</button>
 <!-- 用户信息区域 -->
 <div class="p-4 border-b border-gray-100 flex items-center gap-3">
 <div class="w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center">
@@ -258,9 +257,24 @@
 </div>
 </aside>
 <!-- 主内容区域 -->
-<main class="flex-1 overflow-hidden flex flex-col">
+<main class="flex-1 overflow-hidden flex flex-col relative">
 <!-- 模块切换区域 -->
-<div class="h-full">
+<div class="h-full relative">
+<!-- HOME: 系统欢迎界面 -->
+<section class="w-full h-full flex items-center justify-center absolute inset-0 opacity-0 pointer-events-none transition-opacity duration-300 bg-gradient-to-br from-blue-50 via-white to-indigo-50" id="module-home">
+<div class="text-center px-6">
+<div class="w-20 h-20 mx-auto bg-primary text-white rounded-2xl flex items-center justify-center shadow-lg mb-5">
+<i class="fas fa-network-wired text-3xl"></i>
+</div>
+<h2 class="text-3xl font-bold text-gray-800 mb-3">欢迎使用 ZIPC 系统</h2>
+<p class="text-gray-500 mb-6">请从左侧导航选择功能模块开始使用，或点击下方快速入口。</p>
+<div class="flex flex-wrap justify-center gap-3">
+<button class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-600 transition" onclick="switchTab('zipc')"><i class="fas fa-matrix-group mr-1"></i>ZIPC矩阵生成</button>
+<button class="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition" onclick="switchTab('qa')"><i class="fas fa-comments mr-1"></i>需求智能问答</button>
+<button class="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition" onclick="switchTab('knowledge')"><i class="fas fa-book-open mr-1"></i>知识管理</button>
+</div>
+</div>
+</section>
 <!-- MODULE 1: ZIPC矩阵生成 -->
 <section class="w-full h-full flex flex-col absolute inset-0 transition-opacity duration-300 z-10" id="module-zipc">
 <div class="flex-1 flex flex-col md:flex-row h-full overflow-hidden">
@@ -297,8 +311,8 @@
 </div>
 <!-- 操作按钮 -->
 <div class="space-y-3">
-<button class="w-full bg-primary hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg shadow transition flex justify-center items-center gap-2" id="btn-run" onclick="runGeneration()">
-<i class="fas fa-play"></i> 运行生成（校验/推理/查询）
+<button class="w-full bg-primary hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg shadow transition flex justify-center items-center gap-2" id="btn-run" onclick="runRequirementAnalysis()">
+<i class="fas fa-magnifying-glass-chart"></i> 运行需求分析
                                     </button>
 <div class="grid grid-cols-2 gap-3">
 <button class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-2 px-4 rounded-lg transition text-sm" onclick="exportData('json')">
@@ -308,6 +322,29 @@
 <i class="fas fa-file-archive mr-1"></i> 导出 ZIP/TXT
                                         </button>
 </div>
+<div class="grid grid-cols-2 gap-3">
+<button class="bg-indigo-600 text-white hover:bg-indigo-700 font-medium py-2 px-4 rounded-lg transition text-sm" onclick="generateSeatModel()">
+<i class="fas fa-table mr-1"></i> 生成SEAT模型
+                                        </button>
+<button class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-2 px-4 rounded-lg transition text-sm" onclick="importFromHistory()">
+<i class="fas fa-clock-rotate-left mr-1"></i> 历史项目导入
+                                        </button>
+</div>
+<div class="bg-blue-50 border border-blue-100 rounded-lg p-3">
+<div class="flex items-center justify-between mb-2">
+<span class="text-sm font-semibold text-blue-800">术语识别进度</span>
+<span class="text-xs text-blue-600" id="term-progress-text">未开始</span>
+</div>
+<div class="w-full h-2 bg-blue-100 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-0 transition-all duration-500" id="term-progress-bar"></div>
+</div>
+<div class="mt-3 max-h-32 overflow-y-auto text-xs text-gray-600 space-y-1" id="term-list">
+<span class="text-gray-400">点击“运行需求分析”后显示术语列表</span>
+</div>
+</div>
+<div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
+<div class="text-sm font-semibold text-gray-700 mb-2">版本历史（演示）</div>
+<div class="space-y-2 text-xs" id="zipc-version-list"></div>
 </div>
 <!-- 元信息 -->
 <div class="pt-4 border-t border-gray-100">
@@ -339,8 +376,21 @@
 <div class="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
 <span class="text-primary font-medium">正在生成状态变迁矩阵...</span>
 </div>
-<!-- Sankey图容器 -->
-<div class="w-full h-full bg-white rounded-xl shadow-sm border border-gray-200" id="sankey-chart"></div>
+<div class="h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+<div class="px-4 py-2 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+<span class="text-sm font-semibold text-gray-700">SEAT模型表格视图</span>
+<div class="flex items-center gap-3">
+<button class="text-xs text-gray-500 hover:text-primary" onclick="toggleSankeyPanel()" id="toggle-sankey-btn">显示状态矩阵</button>
+<button class="text-xs text-primary hover:underline" onclick="openExportConfig()">导出配置</button>
+</div>
+</div>
+<div class="flex-1 overflow-auto" id="seat-table-container">
+<div class="p-4 text-sm text-gray-400">请先运行需求分析并生成SEAT模型</div>
+</div>
+<div class="hidden border-t border-gray-100 p-3" id="sankey-panel">
+<div class="w-full h-72" id="sankey-chart"></div>
+</div>
+</div>
 </div>
 <!-- 状态路径面板 -->
 <div class="h-1/3 bg-white border-t border-gray-200 flex flex-col shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-10">
@@ -362,46 +412,17 @@
 <section class="w-full h-full flex flex-col md:flex-row absolute inset-0 opacity-0 pointer-events-none transition-opacity duration-300 bg-bgLight" id="module-qa">
 <!-- 左侧：历史记录 -->
 <aside class="w-full md:w-[30%] bg-white border-r border-gray-200 flex flex-col h-full z-20">
-<div class="p-4 border-b border-gray-100">
+<div class="p-4 border-b border-gray-100 space-y-3">
 <div class="relative">
-<input class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-primary outline-none" placeholder="搜索历史记录..." type="text"/>
+<input class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-primary outline-none" id="chat-history-search" oninput="filterChatHistory(this.value)" placeholder="搜索历史记录..." type="text"/>
 <i class="fas fa-search absolute left-3 top-2.5 text-gray-400 text-xs"></i>
 </div>
-</div>
-<div class="flex-1 overflow-y-auto">
-<div class="px-4 py-2 text-xs font-bold text-gray-400 uppercase">今天</div>
-<div class="px-2 space-y-1">
-<div class="p-3 rounded-lg hover:bg-blue-50 cursor-pointer group transition bg-blue-50 border-l-4 border-primary" onclick="loadChatHistory('zipc-question')">
-<div class="text-sm font-medium text-gray-800 truncate">ZIPC状态机配置问题</div>
-<div class="text-xs text-gray-500 mt-1 flex justify-between">
-<span>10:30</span>
-<i class="far fa-star text-gray-300 group-hover:text-yellow-400"></i>
+<div class="grid grid-cols-2 gap-2">
+<button class="text-sm bg-primary text-white py-2 rounded-lg hover:bg-blue-600 transition" onclick="startNewChat()"><i class="fas fa-plus mr-1"></i>新建对话</button>
+<button class="text-sm border border-gray-200 text-gray-600 py-2 rounded-lg hover:bg-gray-50 transition" onclick="clearChatHistory()"><i class="fas fa-trash-alt mr-1"></i>清空历史</button>
 </div>
 </div>
-<div class="p-3 rounded-lg hover:bg-gray-50 cursor-pointer group transition border-l-4 border-transparent" onclick="loadChatHistory('export-question')">
-<div class="text-sm font-medium text-gray-800 truncate">如何导出矩阵数据？</div>
-<div class="text-xs text-gray-500 mt-1 flex justify-between">
-<span>09:15</span>
-<i class="far fa-star text-gray-300 group-hover:text-yellow-400"></i>
-</div>
-</div>
-</div>
-<div class="px-4 py-2 text-xs font-bold text-gray-400 uppercase mt-4">过去7天</div>
-<div class="px-2 space-y-1">
-<div class="p-3 rounded-lg hover:bg-gray-50 cursor-pointer group transition border-l-4 border-transparent" onclick="loadChatHistory('knowledge-question')">
-<div class="text-sm font-medium text-gray-800 truncate">知识图谱节点关联逻辑</div>
-<div class="text-xs text-gray-500 mt-1 flex justify-between">
-<span>2月24日</span>
-<i class="far fa-star text-gray-300 group-hover:text-yellow-400"></i>
-</div>
-</div>
-</div>
-</div>
-<div class="p-4 border-t border-gray-200">
-<button class="w-full text-left text-sm text-gray-600 hover:text-primary flex items-center gap-2" onclick="startNewChat()">
-<i class="fas fa-plus"></i> 新建对话
-                            </button>
-</div>
+<div class="flex-1 overflow-y-auto px-2 py-2 space-y-1" id="chat-history-list"></div>
 </aside>
 <!-- 右侧：聊天界面 -->
 <div class="w-full md:w-[70%] flex flex-col h-full bg-white">
@@ -409,6 +430,9 @@
 <div class="h-14 bg-primary text-white flex items-center px-6 shadow-md flex-shrink-0">
 <span class="font-bold text-lg">需求智能问答</span>
 <span class="ml-auto text-sm opacity-80"><i class="fas fa-robot mr-1"></i>AI 助手在线</span>
+</div>
+<div class="px-6 py-2 border-b border-gray-200 bg-blue-50 text-sm text-blue-700" id="qa-status-bar">
+<i class="fas fa-circle-check mr-1"></i> 就绪：可提问 ZIPC 建模、状态机设计、术语定义等问题。
 </div>
 <!-- 消息区域 -->
 <div class="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50" id="chat-messages">
@@ -1250,6 +1274,39 @@
 </div>
 <!-- Toast通知容器 -->
 <div id="toast-container"></div>
+<!-- 需求澄清弹窗 -->
+<div class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4" id="clarification-modal">
+<div class="bg-white rounded-xl shadow-lg w-full max-w-xl">
+<div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center">
+<h3 class="text-lg font-bold text-gray-800">需求澄清交互</h3>
+<button class="text-gray-400 hover:text-gray-600" onclick="closeClarificationModal()"><i class="fas fa-times"></i></button>
+</div>
+<div class="p-5 space-y-3 text-sm">
+<p class="text-gray-600">检测到需求存在歧义：<span class="font-medium text-gray-800">“系统在异常状态下应执行恢复操作”</span></p>
+<label class="block text-gray-700 font-medium">请补充恢复操作动作：</label>
+<textarea id="clarification-input" class="w-full border border-gray-300 rounded-lg p-3 h-24 outline-none focus:ring-2 focus:ring-primary" placeholder="例如：回滚最近事务、重置传感器、发送告警"></textarea>
+</div>
+<div class="px-5 py-4 border-t border-gray-100 flex justify-end gap-2">
+<button class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded" onclick="closeClarificationModal()">取消</button>
+<button class="px-4 py-2 text-sm bg-primary text-white rounded hover:bg-blue-600" onclick="confirmClarification()">确认并继续生成</button>
+</div>
+</div>
+</div>
+
+<!-- 导出配置弹窗 -->
+<div class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4" id="export-modal">
+<div class="bg-white rounded-xl shadow-lg w-full max-w-md">
+<div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center">
+<h3 class="text-lg font-bold text-gray-800">模型导出配置</h3>
+<button class="text-gray-400 hover:text-gray-600" onclick="closeExportConfig()"><i class="fas fa-times"></i></button>
+</div>
+<div class="p-5 space-y-3">
+<button class="w-full text-left border border-gray-200 rounded-lg p-3 hover:bg-gray-50" onclick="doExportModel('jsonc')"><div class="font-medium">JSONC（系统交换）</div><div class="text-xs text-gray-500">包含元信息、SEAT矩阵与注释</div></button>
+<button class="w-full text-left border border-gray-200 rounded-lg p-3 hover:bg-gray-50" onclick="doExportModel('excel')"><div class="font-medium">Excel（评审导入）</div><div class="text-xs text-gray-500">二维矩阵结构，便于人工审阅</div></button>
+</div>
+</div>
+</div>
+
 <!-- 知识编辑模态框 -->
 <div class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4" id="knowledge-modal">
 <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
@@ -1323,10 +1380,14 @@
             zipc: {
                 temp: 0.2,
                 isGenerating: false,
-                data: null
+                data: null,
+                analysisDone: false,
+                pendingClarification: false
             },
             chat: {
                 history: [],
+                sessions: [],
+                activeSessionId: null,
                 isTyping: false
             },
             knowledge: {
@@ -1334,39 +1395,15 @@
             }
         };
 
-        const defaultZipcText = `初始节点
-→ 一阶段
-→ 二阶段
-→ 子节点1/启动触发
-→ 子节点1/停止触发
-→ 子节点1/切换至活动模式
-→ 一阶段
-→ 二阶段
-→ 子节点1/切换至活动模式
-→ 一阶段
-→ 二阶段
-→ 子节点1/切换至活动模式
-→ 一阶段
-→ 二阶段
-→ 子节点1/切换至活动模式
-→ 一阶段
-→ 二阶段
-→ 子节点1/切换至活动模式
-→ 一阶段
-→ 二阶段
-→ 子节点1/切换至活动模式
-→ 一阶段
-→ 二阶段
-→ 子节点1/切换至活动模式
-→ 一阶段
-→ 二阶段
-→ 子节点1/切换至活动模式
-→ 一阶段
-→ 二阶段
-→ 子节点1/切换至活动模式
-→ 一阶段
-→ 二阶段
-→ 子节点1/切换至活动模式`;
+        const defaultZipcText = `项目名称：冰箱控制系统
+需求概述：系统需要根据电源、温度和门体事件进行状态控制。
+关键状态：待机、运行（复合状态，含正常运行/压缩机启动/压缩机关闭）。
+关键事件：电源开关、温度过高、温度过低、门打开、门关闭。
+约束：非法操作需记录错误日志，未定义动作应标记为需求遗漏。
+补充需求：系统在异常状态下应执行恢复操作。`;
+
+        const zipcSeatDemo = {"主表0":{"meta":{"title":"冰箱控制状态机","description":"描述冰箱的运行与控制逻辑","symbols":{"A":{"/":"无操作","×":"非法操作（记录错误日志）","null":"动作未被定义(需求遗漏)","子表0.1":"激活制冷子系统"},"T":{"-":"保持当前状态","null":"动作未被定义(需求遗漏)"}},"initial":"待机"},"S":[{"name":"待机","type":"atomic"},{"name":"运行","type":"compound","children":"子表0.1","initial":"正常运行"}],"E":["电源开关","温度过高","温度过低","门打开","门关闭"],"SEAT":{"电源开关":{"待机":{"A":["@启动制冷系统","@初始化传感器"],"T":"运行"},"运行":{"A":["@停止制冷系统","@保存状态"],"T":"待机"}},"温度过高":{"待机":{"A":["/"],"T":"-"},"运行":{"A":["启动压缩机","增加制冷强度"],"T":"运行"}},"温度过低":{"待机":{"A":["/"],"T":"-"},"运行":{"A":["关闭压缩机","降低制冷强度"],"T":"运行"}},"门打开":{"待机":{"A":["/"],"T":"-"},"运行":{"A":["暂停制冷","记录门开事件"],"T":"运行"}},"门关闭":{"待机":{"A":["/"],"T":"-"},"运行":{"A":["恢复制冷","重新监测温度"],"T":"运行"}}}},"子表0.1":{"meta":{"title":"制冷子系统","parent":"主表0/运行","initial":"正常运行"},"S":[{"name":"正常运行","type":"atomic"},{"name":"压缩机启动","type":"atomic"},{"name":"压缩机关闭","type":"atomic"}],"E":["温度过高","温度过低","门打开","门关闭"],"SEAT":{"温度过高":{"正常运行":{"A":["启动压缩机","增加制冷强度"],"T":"压缩机启动"},"压缩机启动":{"A":["/"],"T":"压缩机启动"},"压缩机关闭":{"A":["×"],"T":"-"}},"温度过低":{"正常运行":{"A":["关闭压缩机","降低制冷强度"],"T":"压缩机关闭"},"压缩机启动":{"A":["×"],"T":"-"},"压缩机关闭":{"A":["启动压缩机","增加制冷强度"],"T":"正常运行"}},"门打开":{"正常运行":{"A":["暂停制冷","记录门开事件"],"T":"正常运行"},"压缩机启动":{"A":["暂停制冷","记录门开事件"],"T":"正常运行"},"压缩机关闭":{"A":["暂停制冷","记录门开事件"],"T":"正常运行"}},"门关闭":{"正常运行":{"A":["恢复制冷","重新监测温度"],"T":"正常运行"},"压缩机启动":{"A":["恢复制冷","重新监测温度"],"T":"正常运行"},"压缩机关闭":{"A":["恢复制冷","重新监测温度"],"T":"正常运行"}}}}};
+
 
         // 图表实例
         let zipcChart;
@@ -1377,9 +1414,11 @@
             // 设置默认文本
             document.getElementById('zipc-input').value = defaultZipcText;
             
-            // 初始化图表实例
-            initZipcChart();
-            initKnowledgeGraph();
+            // 初始化模块（容错）
+            safeInit(initZipcChart, 'ZIPC矩阵预览初始化失败');
+            safeInit(initKnowledgeGraph, '知识图谱初始化失败');
+            safeInit(initQAModule, '问答模块初始化失败');
+            safeInit(renderVersionHistory, '版本历史初始化失败');
 
             // 处理窗口大小调整
             window.addEventListener('resize', () => {
@@ -1400,6 +1439,22 @@
         });
 
         // 切换模块函数
+        function goHome() {
+            switchTab('home');
+            if (window.innerWidth < 768) {
+                toggleSidebar(false);
+            }
+        }
+
+        function safeInit(fn, failMessage) {
+            try {
+                if (typeof fn === 'function') fn();
+            } catch (e) {
+                console.error(e);
+                showToast(failMessage, 'warning');
+            }
+        }
+
         function switchTab(tabId) {
             state.activeTab = tabId;
             
@@ -1427,7 +1482,7 @@
             }
 
             // 切换模块显示
-            const modules = ['zipc', 'qa', 'knowledge', 'upload', 'projects', 'models', 'profile', 'admin'];
+            const modules = ['home', 'zipc', 'qa', 'knowledge', 'upload', 'projects', 'models', 'profile', 'admin'];
             modules.forEach(id => {
                 const el = document.getElementById(`module-${id}`);
                 if (id === tabId) {
@@ -1439,7 +1494,7 @@
                         setTimeout(() => zipcChart.resize(), 50);
                     }
                     if (id === 'knowledge' && kgChart) {
-                        setTimeout(() => kgChart.resize(), 50);
+                        if (kgChart && typeof kgChart.resize === 'function') setTimeout(() => kgChart.resize(), 50);
                     }
                 } else {
                     el.classList.add('opacity-0', 'pointer-events-none');
@@ -1509,10 +1564,10 @@
             }
         }
 
-        function runGeneration() {
+        function runRequirementAnalysis() {
             if (state.zipc.isGenerating) return;
-            
-            const text = document.getElementById('zipc-input').value;
+            const inputEl = document.getElementById('zipc-input');
+            const text = inputEl ? inputEl.value : '';
             if (!text.trim()) {
                 showToast('请输入需求文档或上传文件', 'error');
                 return;
@@ -1520,131 +1575,267 @@
 
             state.zipc.isGenerating = true;
             const btn = document.getElementById('btn-run');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 处理中...';
-            btn.disabled = true;
-
-            document.getElementById('zipc-loading').classList.remove('hidden');
-            document.getElementById('zipc-loading').classList.add('flex');
-
-            // 模拟处理延迟
-            setTimeout(() => {
-                processZipcData(text);
-                
-                state.zipc.isGenerating = false;
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-                document.getElementById('zipc-loading').classList.add('hidden');
-                document.getElementById('zipc-loading').classList.remove('flex');
-                
-                showToast('矩阵生成成功', 'success');
-            }, 1500);
-        }
-
-        function processZipcData(text) {
-            // 解析特定格式 "Node -> Node"
-            const lines = text.split('\n');
-            const nodes = new Map();
-            const links = [];
-            const pathSequence = [];
-            
-            let nodeCounter = 0;
-
-            lines.forEach(line => {
-                const parts = line.split('→').map(s => s.trim()).filter(s => s);
-                if (parts.length < 2) {
-                    if (parts.length === 1 && parts[0]) {
-                        // 初始节点
-                        if (!nodes.has(parts[0])) {
-                            nodes.set(parts[0], { name: parts[0], id: nodeCounter++ });
-                        }
-                        pathSequence.push(parts[0]);
-                    }
-                    return;
+            const originalText = btn ? btn.innerHTML : '';
+            try {
+                if (btn) {
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 需求分析中...';
+                    btn.disabled = true;
+                }
+                const loading = document.getElementById('zipc-loading');
+                if (loading) {
+                    loading.classList.remove('hidden');
+                    loading.classList.add('flex');
                 }
 
-                parts.forEach((part, index) => {
-                    if (!nodes.has(part)) {
-                        nodes.set(part, { name: part, id: nodeCounter++ });
-                    }
-                    if (index > 0) {
-                        const source = parts[index - 1];
-                        const target = part;
-                        
-                        // 检查链接是否已存在
-                        const existingLink = links.find(l => l.source === source && l.target === target);
-                        if (existingLink) {
-                            existingLink.value += 1;
-                        } else {
-                            links.push({ source, target, value: 1 });
+                updateTermProgress(20, '正在预处理文档...');
+                setTimeout(() => updateTermProgress(55, '正在进行术语识别...'), 350);
+                setTimeout(() => {
+                    try {
+                        renderTermList();
+                        updateTermProgress(100, '术语识别完成');
+                        state.zipc.analysisDone = true;
+                        showToast('需求分析完成，请继续生成SEAT模型', 'success');
+                    } catch (e) {
+                        console.error(e);
+                        showToast('需求分析过程出现异常', 'error');
+                    } finally {
+                        state.zipc.isGenerating = false;
+                        if (btn) {
+                            btn.innerHTML = originalText;
+                            btn.disabled = false;
+                        }
+                        const loading2 = document.getElementById('zipc-loading');
+                        if (loading2) {
+                            loading2.classList.add('hidden');
+                            loading2.classList.remove('flex');
                         }
                     }
-                    pathSequence.push(part);
+                }, 1100);
+            } catch (e) {
+                console.error(e);
+                state.zipc.isGenerating = false;
+                if (btn) {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+                showToast('运行需求分析失败', 'error');
+            }
+        }
+
+        function updateTermProgress(percent, text) {
+            document.getElementById('term-progress-bar').style.width = percent + '%';
+            document.getElementById('term-progress-text').textContent = text;
+        }
+
+        function renderTermList() {
+            const terms = [
+                '复合状态：运行（子表0.1）',
+                '原子状态：待机 / 正常运行 / 压缩机启动 / 压缩机关闭',
+                '事件：电源开关、温度过高、温度过低、门打开、门关闭',
+                '动作：启动制冷系统、暂停制冷、恢复制冷',
+                '约束：非法操作×、未定义动作null'
+            ];
+            const html = terms.map((t, idx) => `<div class="flex items-start gap-2"><span class="mt-0.5 text-primary">${idx+1}.</span><span>${t}</span></div>`).join('');
+            document.getElementById('term-list').innerHTML = html;
+        }
+
+        function importFromHistory() {
+            document.getElementById('zipc-input').value = defaultZipcText + '\n（已从历史项目“冰箱控制V2”导入）';
+            showToast('已从历史项目导入需求文档', 'info');
+        }
+
+        function generateSeatModel() {
+            if (!state.zipc.analysisDone) { showToast('请先运行需求分析', 'warning'); return; }
+            const text = document.getElementById('zipc-input').value;
+            if (text.includes('异常状态') && !state.zipc.pendingClarification) {
+                state.zipc.pendingClarification = true;
+                document.getElementById('clarification-modal').classList.remove('hidden');
+                document.getElementById('clarification-modal').classList.add('flex');
+                return;
+            }
+            processZipcDataFromDemo();
+            renderSeatTable();
+            renderVersionHistory();
+            showToast('SEAT模型已生成', 'success');
+        }
+
+        function closeClarificationModal() {
+            document.getElementById('clarification-modal').classList.add('hidden');
+            document.getElementById('clarification-modal').classList.remove('flex');
+        }
+
+        function confirmClarification() {
+            const extra = document.getElementById('clarification-input').value.trim();
+            if (!extra) { showToast('请填写澄清内容', 'warning'); return; }
+            state.zipc.pendingClarification = false;
+            closeClarificationModal();
+            showToast('澄清信息已记录：' + extra, 'info');
+            processZipcDataFromDemo();
+            renderSeatTable();
+            renderVersionHistory();
+        }
+
+        function processZipcDataFromDemo() {
+            const main = zipcSeatDemo['主表0'];
+            const nodes = main.S.map(s => ({ name: s.name }));
+            const links = [];
+            const pathSequence = [main.meta.initial];
+            Object.entries(main.SEAT).forEach(([event, byState]) => {
+                Object.entries(byState).forEach(([from, cfg]) => {
+                    const to = cfg.T === '-' ? from : cfg.T;
+                    if (to && to !== 'null') links.push({ source: from, target: to, value: 1, event });
                 });
             });
-
-            state.zipc.data = { nodes: Array.from(nodes.values()), links, pathSequence };
+            pathSequence.push('运行','正常运行');
+            state.zipc.data = { nodes, links, pathSequence, seat: zipcSeatDemo };
             renderSankeyChart(state.zipc.data);
-            renderStatePath(state.zipc.data.pathSequence);
+            renderStatePath(pathSequence);
+        }
+
+        function renderSeatTable() {
+            const container = document.getElementById('seat-table-container');
+            if (!container) return;
+            if (!zipcSeatDemo || typeof zipcSeatDemo !== 'object') {
+                container.innerHTML = '<div class="p-4 text-sm text-red-500">演示数据缺失，无法渲染SEAT表</div>';
+                return;
+            }
+            const tableOrder = ['主表0', '子表0.1'];
+            const html = tableOrder
+                .filter(key => zipcSeatDemo[key])
+                .map(key => renderSingleSeatTable(key, zipcSeatDemo[key]))
+                .join('');
+            container.innerHTML = html || '<div class="p-4 text-sm text-red-500">未找到可渲染的SEAT表数据</div>';
+        }
+
+        function renderSingleSeatTable(tableKey, table) {
+            const states = table.S.map(s => s.name);
+            const events = table.E;
+            const symbols = table.meta?.symbols || {};
+            const symbolRows = Object.entries(symbols).flatMap(([group, vals]) =>
+                Object.entries(vals).map(([symbol, desc]) => `<span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-blue-50 text-blue-700"><strong>${group}:${symbol}</strong><span>${desc}</span></span>`)
+            );
+
+            let rows = '';
+            events.forEach(eventName => {
+                rows += `<tr><td class="px-3 py-2 border-b font-medium text-gray-700 whitespace-nowrap">${eventName}</td>`;
+                states.forEach(stateName => {
+                    const cell = table.SEAT[eventName]?.[stateName];
+                    const transition = cell?.T ?? 'null';
+                    const actions = cell?.A?.length ? cell.A.join('、') : 'null';
+                    rows += `<td class="px-3 py-2 border-b align-top text-gray-600"><div><span class="text-gray-400">T:</span> ${transition}</div><div><span class="text-gray-400">A:</span> ${actions}</div></td>`;
+                });
+                rows += '</tr>';
+            });
+
+            return `
+                <div class="p-3 border-b border-gray-100">
+                    <div class="text-center font-semibold text-gray-800">${tableKey}</div>
+                    <div class="text-center text-xs text-gray-500 mb-2">${table.meta?.title || ''}</div>
+                    <div class="text-xs text-gray-500 mb-2">初始状态：${table.meta?.initial || '-'}</div>
+                    ${symbolRows.length ? `<div class="flex flex-wrap gap-2 mb-3 text-xs">${symbolRows.join('')}</div>` : ''}
+                    <div class="overflow-auto">
+                        <table class="min-w-full text-xs border border-gray-200">
+                            <thead>
+                                <tr class="bg-gray-50">
+                                    <th class="px-3 py-2 text-left border-b border-r">事件 / 状态</th>
+                                    ${states.map(name => `<th class="px-3 py-2 text-left border-b border-r last:border-r-0 whitespace-nowrap">${name}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderVersionHistory() {
+            const versions = [
+                {v:'v2.3.0', t:'2026-02-26 10:21', d:'完成术语识别与SEAT生成'},
+                {v:'v2.2.1', t:'2026-02-25 18:40', d:'补充门体事件转移规则'},
+                {v:'v2.1.0', t:'2026-02-24 16:12', d:'初始化冰箱控制状态机模板'}
+            ];
+            document.getElementById('zipc-version-list').innerHTML = versions.map(i=>`<button class="w-full text-left border border-gray-200 rounded p-2 hover:bg-white" onclick="showToast('已加载版本 ${i.v}', 'info')"><div class="font-semibold text-gray-700">${i.v}</div><div class="text-gray-500">${i.t} · ${i.d}</div></button>`).join('');
+        }
+
+        function openExportConfig() {
+            if (!state.zipc.data) { showToast('请先生成SEAT模型', 'warning'); return; }
+            document.getElementById('export-modal').classList.remove('hidden');
+            document.getElementById('export-modal').classList.add('flex');
+        }
+
+        function closeExportConfig() {
+            document.getElementById('export-modal').classList.add('hidden');
+            document.getElementById('export-modal').classList.remove('flex');
+        }
+
+        function doExportModel(format) {
+            const content = format === 'jsonc' ? JSON.stringify(zipcSeatDemo, null, 2) : 'Excel导出示例：可接入后端真实文件流';
+            const filename = format === 'jsonc' ? 'zipc-seat-model.jsonc' : 'zipc-seat-model.xlsx';
+            const mime = format === 'jsonc' ? 'application/json' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+            const blob = new Blob([content], { type: mime });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+            closeExportConfig();
+            showToast('已导出 ' + filename, 'success');
+        }
+
+        function exportData(type) {
+            if (type === 'zip') { openExportConfig(); return; }
+            if (!state.zipc.data) { showToast('暂无数据可导出，请先生成矩阵', 'warning'); return; }
+            const content = JSON.stringify(state.zipc.data, null, 2);
+            const blob = new Blob([content], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = 'zipc_matrix.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+            showToast('JSON 已成功保存', 'success');
+        }
+
+        function toggleSankeyPanel() {
+            const panel = document.getElementById('sankey-panel');
+            const btn = document.getElementById('toggle-sankey-btn');
+            const isHidden = panel.classList.contains('hidden');
+            if (isHidden) {
+                panel.classList.remove('hidden');
+                btn.textContent = '隐藏状态矩阵';
+                if (zipcChart) setTimeout(() => zipcChart.resize(), 30);
+            } else {
+                panel.classList.add('hidden');
+                btn.textContent = '显示状态矩阵';
+            }
         }
 
         function initZipcChart() {
             const dom = document.getElementById('sankey-chart');
-            zipcChart = echarts.init(dom);
-            // 初始显示空图表
-            zipcChart.setOption({
-                title: { 
-                    text: '等待数据...', 
-                    left: 'center', 
-                    top: 'center', 
-                    textStyle: { color: '#999' } 
-                }
-            });
+            if (!dom) return;
+            dom.innerHTML = '<div class="h-full flex items-center justify-center text-sm text-gray-400">状态矩阵预览（HTML）将在生成后显示</div>';
+            zipcChart = null;
         }
 
         function renderSankeyChart(data) {
-            const option = {
-                tooltip: {
-                    trigger: 'item',
-                    triggerOn: 'mousemove'
-                },
-                series: [
-                    {
-                        type: 'sankey',
-                        layout: 'none',
-                        emphasis: {
-                            focus: 'adjacency'
-                        },
-                        data: data.nodes.map(n => ({ name: n.name })),
-                        links: data.links,
-                        top: '10%',
-                        bottom: '10%',
-                        left: '10%',
-                        right: '10%',
-                        nodeWidth: 20,
-                        nodeGap: 8,
-                        lineStyle: {
-                            color: 'gradient',
-                            curveness: 0.5
-                        },
-                        label: {
-                            fontSize: 12
-                        },
-                        levels: [{
-                            depth: 0,
-                            itemStyle: { color: '#3B82F6' },
-                            lineStyle: { color: 'source', opacity: 0.6 }
-                        }, {
-                            depth: 1,
-                            itemStyle: { color: '#6B7280' }
-                        }, {
-                            depth: 2,
-                            itemStyle: { color: '#10B981' }
-                        }]
-                    }
-                ]
-            };
-            zipcChart.setOption(option, true);
+            const dom = document.getElementById('sankey-chart');
+            if (!dom) return;
+            const links = (data.links || []).map(link => `
+                <tr>
+                    <td class="px-3 py-2 border-b text-gray-700">${escapeHtml(link.source)}</td>
+                    <td class="px-3 py-2 border-b text-gray-500">→</td>
+                    <td class="px-3 py-2 border-b text-gray-700">${escapeHtml(link.target)}</td>
+                    <td class="px-3 py-2 border-b text-gray-500">${escapeHtml(link.event || '状态转移')}</td>
+                </tr>
+            `).join('');
+            dom.innerHTML = `
+                <div class="h-full overflow-auto border border-gray-200 rounded-lg">
+                    <table class="min-w-full text-xs">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-3 py-2 text-left border-b">起始状态</th>
+                                <th class="px-3 py-2 text-left border-b"></th>
+                                <th class="px-3 py-2 text-left border-b">目标状态</th>
+                                <th class="px-3 py-2 text-left border-b">触发事件</th>
+                            </tr>
+                        </thead>
+                        <tbody>${links || '<tr><td class="px-3 py-3 text-gray-400" colspan="4">暂无状态转移数据</td></tr>'}</tbody>
+                    </table>
+                </div>
+            `;
         }
 
         function renderStatePath(sequence) {
@@ -1674,31 +1865,32 @@
         }
 
         function resetZipcView() {
-            if (zipcChart) {
-                zipcChart.dispatchAction({
-                    type: 'restore'
-                });
-                showToast('视图已重置', 'info');
+            const dom = document.getElementById('sankey-chart');
+            if (!dom) return;
+            if (!state.zipc.data?.links?.length) {
+                showToast('暂无矩阵可重置', 'info');
+                return;
             }
+            renderSankeyChart(state.zipc.data);
+            showToast('已重置为默认状态矩阵预览', 'info');
         }
 
         function downloadChartImage() {
-            if (zipcChart) {
-                const imgUrl = zipcChart.getDataURL({
-                    type: 'png',
-                    pixelRatio: 2,
-                    backgroundColor: '#fff'
-                });
-                
-                const a = document.createElement('a');
-                a.href = imgUrl;
-                a.download = 'zipc-matrix.png';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                
-                showToast('图表已下载为PNG图片', 'success');
+            if (!state.zipc.data) {
+                showToast('暂无可下载数据，请先生成SEAT模型', 'warning');
+                return;
             }
+            const content = JSON.stringify(state.zipc.data, null, 2);
+            const blob = new Blob([content], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'zipc-transition-preview.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('已下载状态矩阵预览数据(JSON)', 'success');
         }
 
         function exportData(type) {
@@ -1732,52 +1924,258 @@
         }
 
         // --- 聊天模块逻辑 ---
+        const qaDemoSessions = [
+            {
+                id: 'demo-term',
+                title: '什么是复合状态？',
+                timeLabel: '今天 10:30',
+                messages: [
+                    { type: 'assistant', text: '您好！我是您的智能需求助手。您可以询问关于ZIPC状态变迁矩阵、需求文档解析或知识库管理的任何问题。' },
+                    { type: 'user', text: '什么是复合状态？' },
+                    {
+                        type: 'assistant',
+                        answer: {
+                            text: '复合状态（Composite State）是指在一个父状态内部包含多个子状态的状态结构。\n\n在 ZIPC 建模中，复合状态用于把复杂行为拆分为可管理的层级：父状态描述业务阶段，子状态描述执行步骤。这样可以减少状态爆炸并提升可维护性。',
+                            sources: [
+                                { label: '《ZIPC术语定义》- 2.3 复合状态', href: '#', tag: '术语库' },
+                                { label: '《ZIPC操作手册》- 4.1 分层状态建模', href: '#', tag: '操作手册' }
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                id: 'demo-transfer',
+                title: '状态转移函数的作用',
+                timeLabel: '今天 09:15',
+                messages: [
+                    { type: 'assistant', text: '您好！我是您的智能需求助手。您可以询问关于ZIPC状态变迁矩阵、需求文档解析或知识库管理的任何问题。' },
+                    { type: 'user', text: '状态转移函数的作用是什么？' },
+                    {
+                        type: 'assistant',
+                        answer: {
+                            text: '状态转移函数用于定义系统在接收输入事件后，从当前状态迁移到目标状态的规则。\n\n简化表达为：δ(当前状态, 触发事件, 守卫条件) -> 下一状态。它是保证状态机行为可验证、可复现的核心机制。',
+                            sources: [
+                                { label: '《ZIPC模型规范》- 3.2 状态转移函数', href: '#', tag: '规范文档' },
+                                { label: '《需求建模指南》- 5.4 事件与守卫条件', href: '#', tag: '建模指南' }
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                id: 'demo-unknown',
+                title: '如何进行系统性能优化？',
+                timeLabel: '2月24日',
+                messages: [
+                    { type: 'assistant', text: '您好！我是您的智能需求助手。您可以询问关于ZIPC状态变迁矩阵、需求文档解析或知识库管理的任何问题。' },
+                    { type: 'user', text: '如何进行系统性能优化？' },
+                    {
+                        type: 'assistant',
+                        answer: {
+                            text: '该问题超出了当前 ZIPC 需求建模知识库的覆盖范围。\n\n我目前主要支持 ZIPC 建模、状态机设计、术语定义与规范解释。建议您参考系统架构优化资料，或咨询性能工程专家。',
+                            sources: [
+                                { label: '知识范围说明', href: '#', tag: '系统提示' }
+                            ]
+                        }
+                    }
+                ]
+            }
+        ];
+
+        function initQAModule() {
+            state.chat.sessions = qaDemoSessions.map(s => ({ ...s, messages: s.messages.map(m => ({ ...m })) }));
+            state.chat.activeSessionId = state.chat.sessions[0]?.id || null;
+            renderChatHistory();
+            loadChatHistory(state.chat.activeSessionId, true);
+        }
+
+        function renderChatHistory(keyword = '') {
+            const list = document.getElementById('chat-history-list');
+            const normalized = keyword.trim().toLowerCase();
+            const sessions = state.chat.sessions.filter(item => item.title.toLowerCase().includes(normalized));
+
+            list.innerHTML = sessions.length ? sessions.map(item => `
+                <button class="w-full text-left p-3 rounded-lg transition border-l-4 ${item.id === state.chat.activeSessionId ? 'bg-blue-50 border-primary' : 'hover:bg-gray-50 border-transparent'}" onclick="loadChatHistory('${item.id}')">
+                    <div class="text-sm font-medium text-gray-800 truncate">${escapeHtml(item.title)}</div>
+                    <div class="text-xs text-gray-500 mt-1 flex justify-between">
+                        <span>${item.timeLabel}</span>
+                        <i class="fas fa-history ${item.id === state.chat.activeSessionId ? 'text-primary' : 'text-gray-300'}"></i>
+                    </div>
+                </button>
+            `).join('') : '<div class="p-4 text-sm text-gray-400">未找到匹配的对话记录</div>';
+        }
+
+        function filterChatHistory(keyword) {
+            renderChatHistory(keyword);
+        }
+
+        function loadChatHistory(id, silent = false) {
+            const session = state.chat.sessions.find(item => item.id === id);
+            if (!session) return;
+            state.chat.activeSessionId = id;
+            renderChatHistory(document.getElementById('chat-history-search').value || '');
+            renderChatMessages(session.messages);
+            setQAStatus('已加载历史对话：' + session.title, 'info');
+            if (!silent) showToast('历史对话已加载', 'info');
+        }
+
+        function clearChatHistory() {
+            state.chat.sessions = [];
+            state.chat.activeSessionId = null;
+            document.getElementById('chat-messages').innerHTML = '<div class="text-center text-sm text-gray-400 mt-10">暂无对话，请点击“新建对话”开始提问。</div>';
+            renderChatHistory(document.getElementById('chat-history-search').value || '');
+            setQAStatus('历史记录已清空，请开始新的问题。', 'warning');
+            showToast('对话历史已清空', 'warning');
+        }
+
+        function startNewChat() {
+            const id = 'chat-' + Date.now();
+            const session = {
+                id,
+                title: '新对话',
+                timeLabel: '刚刚',
+                messages: [
+                    { type: 'assistant', text: '您好！我是您的智能需求助手。您可以询问关于ZIPC状态变迁矩阵、需求文档解析或知识库管理的任何问题。' }
+                ]
+            };
+            state.chat.sessions.unshift(session);
+            state.chat.activeSessionId = id;
+            renderChatHistory();
+            renderChatMessages(session.messages);
+            setQAStatus('新对话已创建，可立即提问。', 'success');
+            showToast('新对话已开始', 'success');
+        }
+
         function sendMessage() {
             const input = document.getElementById('chat-input');
             const text = input.value.trim();
-            if (!text) return;
+            if (!text || state.chat.isTyping) return;
 
-            // 添加用户消息
-            addMessage(text, 'user');
+            if (!state.chat.activeSessionId) startNewChat();
+
+            const session = state.chat.sessions.find(item => item.id === state.chat.activeSessionId);
+            if (!session) return;
+
+            session.messages.push({ type: 'user', text });
+            if (session.title === '新对话') {
+                session.title = text.slice(0, 18) + (text.length > 18 ? '...' : '');
+            }
+            session.timeLabel = '刚刚';
+            renderChatHistory(document.getElementById('chat-history-search').value || '');
+            renderChatMessages(session.messages);
             input.value = '';
 
-            // 模拟AI思考
             state.chat.isTyping = true;
-            const thinkingId = addThinkingIndicator();
+            setQAStatus('处理中：正在检索知识库并生成答案...', 'info');
+            const thinkingId = addThinkingIndicator('处理中：知识检索中（术语库 / 规范文档）');
 
-            // 模拟网络延迟和流式响应
+            setTimeout(() => {
+                updateThinkingIndicator(thinkingId, '处理中：答案生成中（语义融合）');
+            }, 600);
+
             setTimeout(() => {
                 removeMessage(thinkingId);
-                streamAIResponse(text);
-            }, 1000);
+                const answer = buildAnswer(text);
+                session.messages.push({ type: 'assistant', answer });
+                renderChatMessages(session.messages);
+                setQAStatus(answer.isUnknown ? '已完成：该问题超出知识库范围。' : '已完成：已返回答案与溯源引用。', answer.isUnknown ? 'warning' : 'success');
+                state.chat.isTyping = false;
+            }, 1400);
+        }
+
+        function buildAnswer(question) {
+            const q = question.toLowerCase();
+            if (q.includes('复合状态')) {
+                return {
+                    text: '复合状态（Composite State）是包含多个子状态的父状态结构。\n\n它适合用于表达“阶段-步骤”类行为，可将复杂流程拆分到层级状态中，并保持状态转移规则清晰。',
+                    sources: [
+                        { label: '《ZIPC术语定义》- 2.3 复合状态', href: '#', tag: '术语库' },
+                        { label: '《ZIPC操作手册》- 4.1 分层状态建模', href: '#', tag: '操作手册' }
+                    ]
+                };
+            }
+            if (q.includes('状态转移函数') || q.includes('转移函数')) {
+                return {
+                    text: '状态转移函数用于定义在触发事件和守卫条件满足时，状态如何从当前节点迁移到目标节点。\n\n常见表达：δ(s, e, g) -> s\'。通过该函数可以对流程正确性进行形式化校验。',
+                    sources: [
+                        { label: '《ZIPC模型规范》- 3.2 状态转移函数', href: '#', tag: '规范文档' },
+                        { label: '《术语手册》- 转移规则', href: '#', tag: '术语库' }
+                    ]
+                };
+            }
+            if (q.includes('zipc') || q.includes('状态机') || q.includes('术语')) {
+                return {
+                    text: '该问题与 ZIPC 建模相关。建议优先从“状态定义 -> 事件触发 -> 守卫条件 -> 转移结果”四个维度描述需求，我可以继续帮您细化为可执行的状态机设计。',
+                    sources: [
+                        { label: '《ZIPC建模指南》- 快速问答模板', href: '#', tag: '建模指南' }
+                    ]
+                };
+            }
+            return {
+                isUnknown: true,
+                text: '该问题超出了当前 ZIPC 需求建模知识库的范围。\n\n我目前主要支持 ZIPC 建模、状态机设计、术语定义与规范解释。建议参考相关领域资料或咨询对应专家。',
+                sources: [
+                    { label: '知识范围说明', href: '#', tag: '系统提示' }
+                ]
+            };
+        }
+
+        function renderChatMessages(messages) {
+            const container = document.getElementById('chat-messages');
+            container.innerHTML = '';
+            messages.forEach(msg => {
+                if (msg.type === 'assistant' && msg.answer) {
+                    addAssistantAnswer(msg.answer);
+                } else {
+                    addMessage(msg.text, msg.type);
+                }
+            });
+            container.scrollTop = container.scrollHeight;
         }
 
         function addMessage(text, type) {
             const container = document.getElementById('chat-messages');
             const div = document.createElement('div');
             div.className = `flex items-start gap-4 fade-in ${type === 'user' ? 'flex-row-reverse' : ''}`;
-            
-            const avatar = type === 'user' 
+
+            const avatar = type === 'user'
                 ? '<div class="w-10 h-10 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center flex-shrink-0"><i class="fas fa-user"></i></div>'
                 : '<div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-robot"></i></div>';
-            
+
             const bubbleClass = type === 'user'
                 ? 'bg-primary text-white rounded-tr-none'
                 : 'bg-white text-gray-700 rounded-tl-none border border-gray-100 shadow-sm';
 
-            div.innerHTML = `
-                ${avatar}
-                <div class="${bubbleClass} p-4 rounded-2xl max-w-[80%] text-sm leading-relaxed">
-                    ${type === 'user' ? text : '<span class="typing-cursor"></span>'}
-                </div>
-            `;
-            
+            div.innerHTML = `${avatar}<div class="${bubbleClass} p-4 rounded-2xl max-w-[80%] text-sm leading-relaxed whitespace-pre-line">${escapeHtml(text)}</div>`;
             container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
-            return div.querySelector('.typing-cursor') || div; // 返回游标元素用于流式输出或用户消息的div
+            return div;
         }
 
-        function addThinkingIndicator() {
+        function addAssistantAnswer(answer) {
+            const container = document.getElementById('chat-messages');
+            const sourceHtml = (answer.sources || []).map(src => `
+                <a href="${src.href}" onclick="event.preventDefault();showToast('演示数据：可接入文档详情页', 'info')" class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100 transition">
+                    <i class="fas fa-link"></i>${escapeHtml(src.tag)} · ${escapeHtml(src.label)}
+                </a>
+            `).join('');
+
+            const div = document.createElement('div');
+            div.className = 'flex items-start gap-4 fade-in';
+            div.innerHTML = `
+                <div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-robot"></i></div>
+                <div class="bg-white text-gray-700 rounded-tl-none border border-gray-100 shadow-sm p-4 rounded-2xl max-w-[80%] text-sm leading-relaxed">
+                    <div class="whitespace-pre-line">${escapeHtml(answer.text)}</div>
+                    <div class="mt-3 pt-3 border-t border-gray-100">
+                        <div class="text-xs text-gray-500 mb-2"><i class="fas fa-bookmark mr-1"></i>知识来源</div>
+                        <div class="flex flex-wrap gap-2">${sourceHtml || '<span class="text-xs text-gray-400">暂无来源</span>'}</div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+        }
+
+        function addThinkingIndicator(text) {
             const container = document.getElementById('chat-messages');
             const id = 'thinking-' + Date.now();
             const div = document.createElement('div');
@@ -1786,7 +2184,7 @@
             div.innerHTML = `
                 <div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-robot"></i></div>
                 <div class="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 text-sm text-gray-500">
-                    <i class="fas fa-circle-notch fa-spin mr-2"></i>正在思考中…
+                    <i class="fas fa-circle-notch fa-spin mr-2"></i><span class="thinking-text">${escapeHtml(text)}</span>
                 </div>
             `;
             container.appendChild(div);
@@ -1794,101 +2192,52 @@
             return id;
         }
 
+        function updateThinkingIndicator(id, text) {
+            const el = document.getElementById(id);
+            const textEl = el?.querySelector('.thinking-text');
+            if (textEl) textEl.textContent = text;
+        }
+
         function removeMessage(id) {
             const el = document.getElementById(id);
             if (el) el.remove();
         }
 
-        function streamAIResponse(userQuery) {
-            const responseText = `根据您关于"${userQuery}"的问题，基于ZIPC状态变迁模型的分析如下：\n\n首先，该状态转移必须满足前置条件校验。在Temperature参数设置为${state.zipc.temp}的情况下，系统的推理路径倾向于选择确定性最高的分支。\n\n具体来说，如果涉及到"非法状态转移"，系统会自动拦截并提示错误。例如，不允许从'等待'直接跳至'完成'。\n\n建议您检查需求文档中的第3.2节定义。\n\n[引用:1]`;
-            
-            // 创建消息容器
-            const container = document.getElementById('chat-messages');
-            const div = document.createElement('div');
-            div.className = `flex items-start gap-4 fade-in`;
-            div.innerHTML = `
-                <div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-robot"></i></div>
-                <div class="bg-white text-gray-700 rounded-tl-none border border-gray-100 shadow-sm p-4 rounded-2xl max-w-[80%] text-sm leading-relaxed">
-                    <span id="streaming-text" class="typing-cursor"></span>
-                </div>
-            `;
-            container.appendChild(div);
-
-            const textSpan = div.querySelector('#streaming-text');
-            let i = 0;
-            
-            const interval = setInterval(() => {
-                textSpan.textContent += responseText.charAt(i);
-                container.scrollTop = container.scrollHeight;
-                i++;
-                if (i >= responseText.length) {
-                    clearInterval(interval);
-                    textSpan.classList.remove('typing-cursor');
-                    state.chat.isTyping = false;
-                }
-            }, 30); // 打字速度
+        function setQAStatus(text, type = 'info') {
+            const bar = document.getElementById('qa-status-bar');
+            const colorMap = {
+                info: 'bg-blue-50 text-blue-700 border-blue-100',
+                success: 'bg-green-50 text-green-700 border-green-100',
+                warning: 'bg-amber-50 text-amber-700 border-amber-100'
+            };
+            bar.className = `px-6 py-2 border-b text-sm ${colorMap[type] || colorMap.info}`;
+            bar.innerHTML = `<i class="fas fa-circle-info mr-1"></i> ${escapeHtml(text)}`;
         }
 
-        function loadChatHistory(id) {
-            // 模拟加载历史聊天记录
-            showToast('正在加载历史对话...', 'info');
-        }
-
-        function startNewChat() {
-            document.getElementById('chat-messages').innerHTML = `
-                <div class="flex items-start gap-4">
-                    <div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center flex-shrink-0">
-                        <i class="fas fa-robot"></i>
-                    </div>
-                    <div class="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 max-w-[80%]">
-                        <p class="text-gray-700 text-sm leading-relaxed">您好！我是您的智能需求助手。您可以询问关于ZIPC状态变迁矩阵、需求文档解析或知识库管理的任何问题。</p>
-                    </div>
-                </div>
-            `;
-            showToast('新对话已开始', 'success');
+        function escapeHtml(text) {
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
         }
 
         // --- 知识管理模块逻辑 ---
         function initKnowledgeGraph() {
             const dom = document.getElementById('knowledge-graph');
-            kgChart = echarts.init(dom);
-            
-            const option = {
-                tooltip: {},
-                animationDurationUpdate: 1500,
-                animationEasingUpdate: 'quinticInOut',
-                series: [
-                    {
-                        type: 'graph',
-                        layout: 'force',
-                        force: {
-                            repulsion: 200,
-                            edgeLength: 100
-                        },
-                        data: [
-                            { name: 'ZIPC模型', symbolSize: 50, itemStyle: { color: '#3B82F6' } },
-                            { name: '状态定义', symbolSize: 30, itemStyle: { color: '#10B981' } },
-                            { name: '转移规则', symbolSize: 30, itemStyle: { color: '#10B981' } },
-                            { name: '需求工程', symbolSize: 40, itemStyle: { color: '#F59E0B' } },
-                            { name: '验证', symbolSize: 20 },
-                            { name: '推理', symbolSize: 20 },
-                            { name: '系统架构', symbolSize: 40, itemStyle: { color: '#6B7280' } }
-                        ],
-                        links: [
-                            { source: 'ZIPC模型', target: '状态定义' },
-                            { source: 'ZIPC模型', target: '转移规则' },
-                            { source: '状态定义', target: '验证' },
-                            { source: '转移规则', target: '推理' },
-                            { source: '需求工程', target: 'ZIPC模型' },
-                            { source: '系统架构', target: '需求工程' }
-                        ],
-                        roam: true,
-                        label: { show: true, position: 'right', formatter: '{b}' },
-                        lineStyle: { color: 'source', curveness: 0.3 }
-                    }
-                ]
-            };
-            kgChart.setOption(option);
+            if (!dom) return;
+            dom.innerHTML = `
+                <div class="h-full p-4 overflow-auto">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                        <div class="bg-white border border-gray-200 rounded-lg p-3"><div class="font-semibold text-primary mb-1">ZIPC模型</div><div class="text-gray-500">核心节点：状态定义、转移规则、验证与推理</div></div>
+                        <div class="bg-white border border-gray-200 rounded-lg p-3"><div class="font-semibold text-green-600 mb-1">状态定义</div><div class="text-gray-500">关联：验证</div></div>
+                        <div class="bg-white border border-gray-200 rounded-lg p-3"><div class="font-semibold text-amber-600 mb-1">需求工程</div><div class="text-gray-500">关联：ZIPC模型</div></div>
+                        <div class="bg-white border border-gray-200 rounded-lg p-3"><div class="font-semibold text-gray-700 mb-1">系统架构</div><div class="text-gray-500">关联：需求工程</div></div>
+                    </div>
+                </div>
+            `;
+            kgChart = null;
         }
 
         function toggleKnowledgeView(view) {
@@ -1906,7 +2255,7 @@
                 
                 graphDiv.classList.remove('hidden');
                 cardDiv.classList.add('hidden');
-                setTimeout(() => kgChart.resize(), 50);
+                if (kgChart && typeof kgChart.resize === 'function') setTimeout(() => kgChart.resize(), 50);
             } else {
                 cardBtn.classList.add('text-primary', 'font-bold', 'border-b-2', 'border-primary');
                 cardBtn.classList.remove('text-gray-500');
@@ -1919,13 +2268,7 @@
         }
 
         function zoomGraph(factor) {
-            if (kgChart) {
-                const option = kgChart.getOption();
-                kgChart.dispatchAction({
-                    type: 'dataZoom',
-                    batch: [{ start: 0, end: 100 * factor }]
-                });
-            }
+            showToast('当前为HTML静态图谱演示，缩放功能已禁用', 'info');
         }
 
         function selectKnowledgeItem(itemId) {
