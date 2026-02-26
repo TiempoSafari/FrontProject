@@ -372,14 +372,13 @@
 </div>
 <!-- 可视化内容 -->
 <div class="flex-1 overflow-hidden relative p-4">
+<div class="hidden" id="sankey-chart" aria-hidden="true"></div>
 <!-- 加载覆盖层 -->
 <div class="absolute inset-0 bg-white/80 z-20 hidden flex-col items-center justify-center" id="zipc-loading">
 <div class="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
 <span class="text-primary font-medium">正在生成状态变迁矩阵...</span>
 </div>
-<!-- Sankey图容器 -->
-<div class="w-full h-[58%] bg-white rounded-xl shadow-sm border border-gray-200" id="sankey-chart"></div>
-<div class="mt-3 h-[42%] bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+<div class="h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
 <div class="px-4 py-2 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
 <span class="text-sm font-semibold text-gray-700">SEAT模型表格视图</span>
 <button class="text-xs text-primary hover:underline" onclick="openExportConfig()">导出配置</button>
@@ -464,106 +463,44 @@
 </div>
 </section>
 <!-- MODULE 3: 知识管理 -->
-<section class="w-full h-full flex flex-col md:flex-row absolute inset-0 opacity-0 pointer-events-none transition-opacity duration-300 bg-bgLight" id="module-knowledge">
-<!-- 左侧：树形导航 -->
-<aside class="w-full md:w-[30%] bg-white border-r border-gray-200 flex flex-col h-full z-20">
+<section class="w-full h-full flex flex-col absolute inset-0 opacity-0 pointer-events-none transition-opacity duration-300 bg-bgLight" id="module-knowledge">
+<div class="h-full flex flex-col lg:flex-row overflow-hidden">
+<aside class="w-full lg:w-[23%] bg-white border-r border-gray-200 flex flex-col h-full">
 <div class="p-4 border-b border-gray-100">
 <div class="flex justify-between items-center mb-3">
-<h3 class="font-bold text-gray-700">知识库分类</h3>
-<button class="text-xs text-primary hover:underline" onclick="openKnowledgeModal()">+ 新建</button>
+<h3 class="font-bold text-gray-700">知识分类</h3>
+<button class="text-xs text-primary hover:underline" onclick="openTermDetail()">+ 新建术语</button>
 </div>
 <div class="relative">
-<input class="w-full pl-8 pr-4 py-1.5 bg-gray-50 border border-gray-200 rounded text-xs focus:ring-1 focus:ring-primary outline-none" placeholder="搜索知识..." type="text"/>
+<input class="w-full pl-8 pr-4 py-1.5 bg-gray-50 border border-gray-200 rounded text-xs focus:ring-1 focus:ring-primary outline-none" id="knowledge-search-input" oninput="filterKnowledgeEntries()" placeholder="搜索术语 / 标签 / 示例..." type="text"/>
 <i class="fas fa-search absolute left-2.5 top-2 text-gray-400 text-xs"></i>
 </div>
 </div>
-<!-- 树形结构 -->
-<div class="flex-1 overflow-y-auto p-2">
-<ul class="space-y-1 text-sm">
-<li>
-<div class="flex items-center p-2 hover:bg-gray-50 rounded cursor-pointer text-gray-700 font-medium">
-<i class="fas fa-folder-open text-yellow-500 mr-2"></i> 全部知识
-                                    </div>
-<ul class="pl-6 mt-1 space-y-1 border-l border-gray-200 ml-3">
-<li>
-<div class="flex items-center p-1.5 hover:bg-blue-50 rounded cursor-pointer text-gray-600 bg-blue-50 text-primary">
-<i class="fas fa-folder text-blue-400 mr-2"></i> ZIPC模型规范
-                                            </div>
-<ul class="pl-6 mt-1 space-y-1 border-l border-gray-200 ml-3">
-<li class="p-1.5 hover:bg-gray-50 rounded cursor-pointer text-gray-500" onclick="selectKnowledgeItem('state-definition')">状态定义</li>
-<li class="p-1.5 hover:bg-gray-50 rounded cursor-pointer text-gray-500" onclick="selectKnowledgeItem('transition-rules')">转移规则</li>
-</ul>
-</li>
-<li>
-<div class="flex items-center p-1.5 hover:bg-gray-50 rounded cursor-pointer text-gray-600">
-<i class="fas fa-folder text-blue-400 mr-2"></i> 需求工程
-                                            </div>
-</li>
-<li>
-<div class="flex items-center p-1.5 hover:bg-gray-50 rounded cursor-pointer text-gray-600">
-<i class="fas fa-folder text-blue-400 mr-2"></i> 系统架构
-                                            </div>
-</li>
-</ul>
-</li>
-</ul>
+<div class="p-3 border-b border-gray-100 grid grid-cols-2 gap-2 text-xs">
+<button class="px-2 py-1.5 rounded border border-gray-200 hover:bg-gray-50" onclick="openKnowledgeBatchImport()">批量导入</button>
+<button class="px-2 py-1.5 rounded border border-gray-200 hover:bg-gray-50" onclick="openBatchTool()">批量处理</button>
+<button class="px-2 py-1.5 rounded border border-gray-200 hover:bg-gray-50" onclick="openPermissionConfig()">权限配置</button>
+<button class="px-2 py-1.5 rounded border border-gray-200 hover:bg-gray-50" onclick="renderKnowledgeEntries()">刷新列表</button>
 </div>
+<div class="flex-1 overflow-y-auto p-2"><ul class="space-y-1 text-sm" id="knowledge-nav-tree"></ul></div>
 </aside>
-<!-- 右侧：图谱与卡片 -->
-<div class="w-full md:w-[70%] flex flex-col h-full overflow-hidden">
-<!-- 视图切换 -->
+<div class="w-full lg:w-[49%] bg-gray-50 border-r border-gray-200 flex flex-col h-full overflow-hidden">
 <div class="h-12 bg-white border-b border-gray-200 flex items-center justify-between px-4">
-<div class="flex gap-4 text-sm">
-<button class="text-primary font-bold border-b-2 border-primary pb-3.5 -mb-3.5" id="view-graph" onclick="toggleKnowledgeView('graph')">图谱视图</button>
-<button class="text-gray-500 hover:text-gray-700 pb-3.5 -mb-3.5" id="view-card" onclick="toggleKnowledgeView('card')">卡片列表</button>
+<div class="text-sm font-semibold text-gray-700">工程术语条目列表</div>
+<select class="text-xs border border-gray-200 rounded px-2 py-1 outline-none" id="knowledge-sort" onchange="renderKnowledgeEntries()"><option value="updated">按更新时间排序</option><option value="priority">按重要级别排序</option></select>
 </div>
-<div class="flex gap-2">
-<select class="text-xs border border-gray-200 rounded px-2 py-1 outline-none">
-<option>按时间排序</option>
-<option>按相关性排序</option>
-</select>
+<div class="flex-1 overflow-y-auto p-4" id="knowledge-card-view"><div class="space-y-3" id="knowledge-entry-list"></div></div>
 </div>
-</div>
-<!-- 图谱视图 -->
-<div class="flex-1 relative bg-gray-50 overflow-hidden" id="knowledge-graph-view">
-<div class="w-full h-full" id="knowledge-graph"></div>
-<!-- 浮动控制按钮 -->
-<div class="absolute bottom-4 right-4 flex flex-col gap-2">
-<button class="w-8 h-8 bg-white rounded shadow text-gray-600 hover:text-primary" onclick="zoomGraph(1.2)"><i class="fas fa-plus"></i></button>
-<button class="w-8 h-8 bg-white rounded shadow text-gray-600 hover:text-primary" onclick="zoomGraph(0.8)"><i class="fas fa-minus"></i></button>
-</div>
-</div>
-<!-- 卡片视图（默认隐藏） -->
-<div class="flex-1 overflow-y-auto p-6 hidden" id="knowledge-card-view">
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-<!-- 卡片1 -->
-<div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition cursor-pointer" onclick="openKnowledgeModal(true)">
-<div class="flex justify-between items-start mb-2">
-<span class="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">ZIPC规范</span>
-<i class="fas fa-ellipsis text-gray-400"></i>
-</div>
-<h4 class="font-bold text-gray-800 mb-1">状态机基础定义</h4>
-<p class="text-xs text-gray-500 line-clamp-2 mb-3">本文档详细定义了ZIPC模型中的基础状态节点及其属性，包括初始状态、中间状态和终止状态的判定标准。</p>
-<div class="flex items-center justify-between text-xs text-gray-400">
-<span><i class="far fa-user mr-1"></i>王志B</span>
-<span>2026-02-24</span>
-</div>
-</div>
-<!-- 卡片2 -->
-<div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition cursor-pointer" onclick="openKnowledgeModal(true)">
-<div class="flex justify-between items-start mb-2">
-<span class="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded">案例研究</span>
-<i class="fas fa-ellipsis text-gray-400"></i>
-</div>
-<h4 class="font-bold text-gray-800 mb-1">电商订单状态流转</h4>
-<p class="text-xs text-gray-500 line-clamp-2 mb-3">基于ZIPC模型实现的电商订单状态变迁实例，包含支付、发货、退款等复杂场景的处理逻辑。</p>
-<div class="flex items-center justify-between text-xs text-gray-400">
-<span><i class="far fa-user mr-1"></i>李明</span>
-<span>2026-02-20</span>
-</div>
-</div>
-</div>
-</div>
+<aside class="w-full lg:w-[28%] bg-white flex flex-col h-full overflow-y-auto">
+<div class="p-4 border-b border-gray-100"><h3 class="font-bold text-gray-700">操作面板</h3><p class="text-xs text-gray-500 mt-1">术语编辑、批量处理、权限配置演示入口。</p></div>
+<div class="p-4 space-y-3">
+<div class="rounded-lg border border-blue-100 bg-blue-50 p-3"><div class="text-sm font-semibold text-blue-800">当前选中条目</div><div class="text-xs text-blue-700 mt-1" id="knowledge-current-item">未选择</div></div>
+<button class="w-full px-3 py-2 text-sm bg-primary text-white rounded-lg hover:bg-blue-600" onclick="openTermDetail(true)">术语详情编辑</button>
+<button class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50" onclick="openKnowledgeBatchImport()">知识文档批量导入</button>
+<button class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50" onclick="openBatchTool()">批量处理工具</button>
+<button class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50" onclick="openPermissionConfig()">权限管理与配置</button>
+<div class="rounded-lg border border-gray-200 p-3"><div class="text-sm font-semibold text-gray-700 mb-2">批量操作预览</div><ul class="text-xs text-gray-600 space-y-1" id="knowledge-batch-preview"></ul></div>
+</div></aside>
 </div>
 </section>
 <!-- MODULE 4: 文件上传 -->
@@ -1306,69 +1243,23 @@
 
 <!-- 知识编辑模态框 -->
 <div class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4" id="knowledge-modal">
-<div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
-<div class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-<h3 class="font-bold text-lg text-gray-800">编辑知识条目</h3>
-<button class="text-gray-400 hover:text-gray-600" onclick="closeKnowledgeModal()">
-<i class="fas fa-times text-xl"></i>
-</button>
+<div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+<div class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50"><h3 class="font-bold text-lg text-gray-800">术语详情编辑界面</h3><button class="text-gray-400 hover:text-gray-600" onclick="closeKnowledgeModal()"><i class="fas fa-times text-xl"></i></button></div>
+<div class="p-6 overflow-y-auto flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="md:col-span-2"><label class="block text-sm mb-1">术语名称 *</label><input id="term-title" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" type="text" value="状态机基础定义"/></div>
+<div class="md:col-span-2"><label class="block text-sm mb-1">标准定义</label><textarea id="term-definition" class="w-full border border-gray-300 rounded px-3 py-2 text-sm h-20">定义原子状态、复合状态与终止状态及其行为约束。</textarea></div>
+<div><label class="block text-sm mb-1">分类标签</label><input class="w-full border border-gray-300 rounded px-3 py-2 text-sm" value="ZIPC模型规范 / 状态定义"/></div>
+<div><label class="block text-sm mb-1">重要级别</label><input class="w-full border border-gray-300 rounded px-3 py-2 text-sm" value="P1"/></div>
+<div><label class="block text-sm mb-1">同义词</label><input id="term-synonyms" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" value="状态节点定义, 状态判定"/></div>
+<div><label class="block text-sm mb-1">相关术语</label><input id="term-related" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" value="转移规则, 事件驱动"/></div>
+<div class="md:col-span-2"><label class="block text-sm mb-1">使用示例</label><textarea id="term-example" class="w-full border border-gray-300 rounded px-3 py-2 text-sm h-16">待机 -> 运行 -> 停机</textarea></div>
+<div class="md:col-span-2"><label class="block text-sm mb-1">适用范围/注释</label><textarea id="term-scope" class="w-full border border-gray-300 rounded px-3 py-2 text-sm h-16">适用于ZIPC建模与评审规范文档。</textarea></div>
 </div>
-<!-- 步骤指示器 -->
-<div class="px-8 pt-4 flex items-center justify-between text-xs text-gray-500">
-<div class="flex items-center text-primary font-bold">
-<span class="w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center mr-1">1</span> 基本信息
-                </div>
-<div class="h-px bg-gray-300 flex-1 mx-2"></div>
-<div class="flex items-center">
-<span class="w-5 h-5 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center mr-1">2</span> 内容编辑
-                </div>
-<div class="h-px bg-gray-300 flex-1 mx-2"></div>
-<div class="flex items-center">
-<span class="w-5 h-5 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center mr-1">3</span> 封面上传
-                </div>
-</div>
-<div class="p-6 overflow-y-auto flex-1 space-y-4">
-<div>
-<label class="block text-sm font-medium text-gray-700 mb-1">标题 <span class="text-red-500">*</span></label>
-<input class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-primary outline-none" type="text" value="状态机基础定义"/>
-</div>
-<div>
-<label class="block text-sm font-medium text-gray-700 mb-1">分类</label>
-<select class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-primary outline-none">
-<option>ZIPC模型规范 &gt; 状态定义</option>
-<option>需求工程</option>
-</select>
-</div>
-<div>
-<label class="block text-sm font-medium text-gray-700 mb-1">摘要</label>
-<textarea class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-primary outline-none h-20">本文档详细定义了ZIPC模型中的基础状态节点及其属性...</textarea>
-</div>
-<!-- 版本控制面板 -->
-<div class="bg-gray-50 p-3 rounded border border-gray-200">
-<div class="flex justify-between items-center mb-2">
-<span class="text-xs font-bold text-gray-600">版本历史</span>
-<button class="text-xs text-primary hover:underline">
-<i class="fas fa-history mr-1"></i>回放足迹
-                        </button>
-</div>
-<div class="space-y-2">
-<div class="flex items-center justify-between text-xs bg-white p-2 rounded border border-gray-100">
-<span class="text-gray-700">v1.2 (当前)</span>
-<span class="text-gray-400">王志B, 2分钟前</span>
-</div>
-<div class="flex items-center justify-between text-xs p-2 rounded opacity-60">
-<span class="text-gray-700">v1.1</span>
-<span class="text-gray-400">王志B, 昨天</span>
-</div>
-</div>
-</div>
-</div>
-<div class="p-4 border-t border-gray-200 flex justify-end gap-3 bg-gray-50">
-<button class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-200 rounded transition" onclick="closeKnowledgeModal()">取消</button>
-<button class="px-4 py-2 text-sm bg-primary text-white hover:bg-blue-600 rounded transition shadow" onclick="saveKnowledge()">保存更改</button>
-</div>
-</div>
-</div>
+<div class="p-4 border-t border-gray-200 flex justify-end gap-3 bg-gray-50"><button class="px-4 py-2 text-sm text-gray-600" onclick="closeKnowledgeModal()">取消</button><button class="px-4 py-2 text-sm bg-primary text-white rounded" onclick="saveKnowledge()">保存更改</button></div>
+</div></div>
+<div class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4" id="knowledge-import-modal"><div class="bg-white rounded-xl shadow-xl w-full max-w-2xl"><div class="p-4 border-b flex justify-between"><h3 class="font-bold">知识文档批量导入界面</h3><button onclick="closeKnowledgeBatchImport()"><i class="fas fa-times"></i></button></div><div class="p-4 space-y-2 text-sm"><div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center bg-gray-50">支持 .pdf / .docx / .txt 批量上传（演示）</div><div class="text-xs border rounded p-2 flex justify-between"><span>需求术语规范_v3.pdf</span><span class="text-emerald-600">解析完成</span></div><div class="text-xs border rounded p-2 flex justify-between"><span>控制策略.docx</span><span class="text-blue-600">解析中 78%</span></div></div></div></div>
+<div class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4" id="knowledge-batch-modal"><div class="bg-white rounded-xl shadow-xl w-full max-w-2xl"><div class="p-4 border-b flex justify-between"><h3 class="font-bold">批量处理工具界面</h3><button onclick="closeBatchTool()"><i class="fas fa-times"></i></button></div><div class="p-4 text-sm space-y-2"><div class="text-xs rounded border p-3 bg-gray-50">预览：统一分类标签、调整重要级别、删除低质量条目（需确认）。</div><button class="w-full px-3 py-2 rounded bg-primary text-white" onclick="showToast('批量操作已提交（演示）','success')">确认执行</button></div></div></div>
+<div class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4" id="knowledge-permission-modal"><div class="bg-white rounded-xl shadow-xl w-full max-w-3xl"><div class="p-4 border-b flex justify-between"><h3 class="font-bold">权限管理与配置界面</h3><button onclick="closePermissionConfig()"><i class="fas fa-times"></i></button></div><div class="p-4"><div class="overflow-auto border rounded"><table class="min-w-full text-sm"><thead class="bg-gray-50"><tr><th class="px-3 py-2 text-left">角色</th><th class="px-3 py-2">查看</th><th class="px-3 py-2">编辑</th><th class="px-3 py-2">审核</th><th class="px-3 py-2">删除</th><th class="px-3 py-2">临时权限</th></tr></thead><tbody id="permission-table-body"></tbody></table></div></div></div></div>
 <script>
         // 全局状态与配置
         const state = {
@@ -1401,6 +1292,30 @@
 
         const zipcSeatDemo = {"主表0":{"meta":{"title":"冰箱控制状态机","description":"描述冰箱的运行与控制逻辑","symbols":{"A":{"/":"无操作","×":"非法操作（记录错误日志）","null":"动作未被定义(需求遗漏)","子表0.1":"激活制冷子系统"},"T":{"-":"保持当前状态","null":"动作未被定义(需求遗漏)"}},"initial":"待机"},"S":[{"name":"待机","type":"atomic"},{"name":"运行","type":"compound","children":"子表0.1","initial":"正常运行"}],"E":["电源开关","温度过高","温度过低","门打开","门关闭"],"SEAT":{"电源开关":{"待机":{"A":["@启动制冷系统","@初始化传感器"],"T":"运行"},"运行":{"A":["@停止制冷系统","@保存状态"],"T":"待机"}},"温度过高":{"待机":{"A":["/"],"T":"-"},"运行":{"A":["启动压缩机","增加制冷强度"],"T":"运行"}},"温度过低":{"待机":{"A":["/"],"T":"-"},"运行":{"A":["关闭压缩机","降低制冷强度"],"T":"运行"}},"门打开":{"待机":{"A":["/"],"T":"-"},"运行":{"A":["暂停制冷","记录门开事件"],"T":"运行"}},"门关闭":{"待机":{"A":["/"],"T":"-"},"运行":{"A":["恢复制冷","重新监测温度"],"T":"运行"}}}},"子表0.1":{"meta":{"title":"制冷子系统","parent":"主表0/运行","initial":"正常运行"},"S":[{"name":"正常运行","type":"atomic"},{"name":"压缩机启动","type":"atomic"},{"name":"压缩机关闭","type":"atomic"}],"E":["温度过高","温度过低","门打开","门关闭"],"SEAT":{"温度过高":{"正常运行":{"A":["启动压缩机","增加制冷强度"],"T":"压缩机启动"},"压缩机启动":{"A":["/"],"T":"压缩机启动"},"压缩机关闭":{"A":["×"],"T":"-"}},"温度过低":{"正常运行":{"A":["关闭压缩机","降低制冷强度"],"T":"压缩机关闭"},"压缩机启动":{"A":["×"],"T":"-"},"压缩机关闭":{"A":["启动压缩机","增加制冷强度"],"T":"正常运行"}},"门打开":{"正常运行":{"A":["暂停制冷","记录门开事件"],"T":"正常运行"},"压缩机启动":{"A":["暂停制冷","记录门开事件"],"T":"正常运行"},"压缩机关闭":{"A":["暂停制冷","记录门开事件"],"T":"正常运行"}},"门关闭":{"正常运行":{"A":["恢复制冷","重新监测温度"],"T":"正常运行"},"压缩机启动":{"A":["恢复制冷","重新监测温度"],"T":"正常运行"},"压缩机关闭":{"A":["恢复制冷","重新监测温度"],"T":"正常运行"}}}}};
 
+        const knowledgeDemoData = {
+            categories: [
+                { id: 'software-engineering', name: '软件工程', children: [{ id: 'requirements-engineering', name: '需求工程' }, { id: 'architecture-design', name: '架构设计' }] },
+                { id: 'quality', name: '质量保障', children: [{ id: 'testing', name: '测试工程' }, { id: 'devops', name: 'DevOps' }] },
+                { id: 'data-engineering', name: '数据与平台', children: [{ id: 'distributed-systems', name: '分布式系统' }, { id: 'database', name: '数据库工程' }] }
+            ],
+            entries: [
+                { id: 'wiki-001', title: 'Requirements Engineering（需求工程）', tag: 'Software Engineering', category: 'requirements-engineering', owner: '王志B', updated: '2026-02-27', priority: 5, status: '已审核', definition: '需求工程是识别、分析、记录、验证并管理系统需求的工程活动。', alias: 'RE, 需求分析', related: 'User Story, Use Case, Traceability', contentHtml: '<p><b>概述：</b>需求工程强调“做正确的系统”。典型流程包含需求获取、冲突消解、优先级排序与需求基线管理。</p><ul><li><b>输入：</b>访谈、业务流程、法规文档</li><li><b>输出：</b>SRS、验收标准、追踪矩阵</li></ul><p><b>工程实践：</b>在迭代开发中常结合 Backlog Grooming 与 DoR/DoD 机制。</p>' },
+                { id: 'wiki-002', title: 'Microservices（微服务架构）', tag: 'Architecture', category: 'architecture-design', owner: '陈晓', updated: '2026-02-26', priority: 5, status: '已发布', definition: '微服务是一种将应用拆分为可独立部署小服务的架构风格。', alias: 'MSA', related: 'DDD, API Gateway, Service Mesh', contentHtml: '<p><b>定义：</b>每个服务围绕单一业务能力构建，并通过轻量通信机制协作。</p><p><b>优点：</b>独立扩缩容、团队自治、技术栈多样化。</p><p><b>挑战：</b>分布式事务、可观测性、网络复杂性与治理成本。</p>' },
+                { id: 'wiki-003', title: 'CAP Theorem（CAP 定理）', tag: 'Distributed Systems', category: 'distributed-systems', owner: '李明', updated: '2026-02-25', priority: 4, status: '已审核', definition: '在分布式系统中，一致性、可用性、分区容错三者无法同时完全满足。', alias: 'Brewer定理', related: 'BASE, Eventual Consistency', contentHtml: '<p><b>核心观点：</b>当网络分区发生时，系统必须在一致性（C）和可用性（A）之间做权衡。</p><p><b>常见误区：</b>CAP 不是日常“任选其二”，而是“分区发生时”的取舍。</p>' },
+                { id: 'wiki-004', title: 'CI/CD（持续集成与持续交付）', tag: 'DevOps', category: 'devops', owner: '赵宁', updated: '2026-02-24', priority: 4, status: '已发布', definition: 'CI/CD 是通过自动化流水线实现快速、可靠软件交付的实践集合。', alias: 'Pipeline', related: 'Trunk-based Development, Blue-Green', contentHtml: '<p><b>CI：</b>自动构建、测试、静态检查，尽早发现集成问题。</p><p><b>CD：</b>自动化发布与回滚策略，缩短变更前置时间。</p><ul><li>质量门禁：单测覆盖、SAST、依赖漏洞扫描</li><li>发布策略：灰度、金丝雀、蓝绿部署</li></ul>' },
+                { id: 'wiki-005', title: 'Test-Driven Development（测试驱动开发）', tag: 'Testing', category: 'testing', owner: '孙伟', updated: '2026-02-23', priority: 3, status: '已审核', definition: 'TDD 是先写失败测试，再实现代码并重构的开发方法。', alias: 'TDD', related: 'Refactoring, Unit Test', contentHtml: '<p><b>循环：</b>Red → Green → Refactor。</p><p><b>价值：</b>提升可测试性，促成低耦合高内聚设计。</p>' },
+                { id: 'wiki-006', title: 'Database Index（数据库索引）', tag: 'Database', category: 'database', owner: '韩磊', updated: '2026-02-22', priority: 4, status: '已发布', definition: '索引是一种辅助数据结构，用于加速查询与排序。', alias: 'B+Tree Index', related: 'Query Optimizer, Explain Plan', contentHtml: '<p><b>常见类型：</b>B+树索引、哈希索引、覆盖索引。</p><p><b>权衡：</b>读取更快但写入成本上升，并占用额外存储。</p>' },
+                { id: 'wiki-007', title: 'Observability（可观测性）', tag: 'SRE', category: 'devops', owner: '周航', updated: '2026-02-21', priority: 5, status: '已审核', definition: '可观测性是通过日志、指标、链路追踪理解系统内部状态的能力。', alias: 'Logs-Metrics-Traces', related: 'SLO, Alerting, Incident Response', contentHtml: '<p><b>三支柱：</b>Metrics、Logs、Traces。</p><p><b>目标：</b>在未知故障下快速定位根因，缩短 MTTR。</p>' },
+                { id: 'wiki-008', title: 'Domain-Driven Design（领域驱动设计）', tag: 'Architecture', category: 'architecture-design', owner: '顾晨', updated: '2026-02-20', priority: 4, status: '已发布', definition: 'DDD 强调通过领域模型与通用语言连接业务与技术实现。', alias: 'DDD', related: 'Bounded Context, Aggregate, Event Storming', contentHtml: '<p><b>核心：</b>围绕限界上下文划分模型边界，降低系统耦合。</p><p><b>实践：</b>在复杂业务场景中可显著提升模型一致性与可演进性。</p>' }
+            ],
+            batchActions: ['统一标签：Engineering-Terms', '批量更新术语状态：待审核 -> 已审核', '批量补充“相关术语”字段模板'],
+            permissions: [
+                { role: '系统管理员', view: true, edit: true, review: true, del: true, temp: true },
+                { role: '领域专家', view: true, edit: true, review: true, del: false, temp: false },
+                { role: '审核员', view: true, edit: false, review: true, del: false, temp: false },
+                { role: '访客', view: true, edit: false, review: false, del: false, temp: false }
+            ]
+        };
 
         // 图表实例
         let zipcChart;
@@ -1413,9 +1328,11 @@
 
             // 初始化图表实例
             initZipcChart();
-            initKnowledgeGraph();
+            renderKnowledgeNavTree();
+            renderKnowledgeEntries();
             initQAModule();
             renderVersionHistory();
+            renderSeatTable();
 
             // 处理窗口大小调整
             window.addEventListener('resize', () => {
@@ -1648,22 +1565,60 @@
             renderStatePath(pathSequence);
         }
 
-        function renderSeatTable(tableKey='主表0') {
-            const table = zipcSeatDemo[tableKey];
-            const states = table.S.map(s => s.name);
-            const events = table.E;
-            let html = '<table class="min-w-full text-xs"><thead><tr class="bg-gray-50"><th class="px-3 py-2 text-left border-b">事件 / 状态</th>' + states.map(s=>`<th class="px-3 py-2 text-left border-b">${s}</th>`).join('') + '</tr></thead><tbody>';
-            events.forEach(e=>{
-                html += `<tr><td class="px-3 py-2 border-b font-medium text-gray-700">${e}</td>`;
-                states.forEach(st=>{
-                    const cell = table.SEAT[e]?.[st];
-                    const val = cell ? `T:${cell.T}<br>A:${cell.A.join('、')}` : 'null';
-                    html += `<td class="px-3 py-2 border-b text-gray-600">${val}</td>`;
+        function renderSeatTable() {
+            const tableKeys = ['主表0', '子表0.1'];
+            const cardHtml = tableKeys.map((tableKey) => {
+                const table = zipcSeatDemo[tableKey];
+                const states = table.S.map(s => s.name);
+                const events = table.E;
+
+                const metaTags = [
+                    `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-50 text-blue-700">初始状态：${table.meta.initial}</span>`,
+                    table.meta.parent ? `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-violet-50 text-violet-700">父状态：${table.meta.parent}</span>` : ''
+                ].join('');
+
+                const symbolRows = table.meta.symbols
+                    ? Object.entries(table.meta.symbols).map(([kind, mapObj]) => {
+                        const symbolText = Object.entries(mapObj).map(([symbol, desc]) => `<span class="mr-3"><code class="px-1 py-0.5 bg-gray-100 rounded">${symbol}</code> ${desc}</span>`).join('');
+                        return `<div><span class="font-semibold text-gray-600 mr-2">${kind}符号：</span>${symbolText}</div>`;
+                    }).join('')
+                    : '';
+
+                let tableHtml = `<table class="min-w-full text-xs md:text-sm"><thead><tr class="bg-gray-50 text-gray-700"><th class="sticky left-0 bg-gray-50 z-10 px-3 py-2 text-left border-b border-gray-200">事件 / 状态</th>${states.map(s=>`<th class="px-3 py-2 text-left border-b border-gray-200 whitespace-nowrap">${s}</th>`).join('')}</tr></thead><tbody>`;
+
+                events.forEach((eventName, eventIndex) => {
+                    tableHtml += `<tr class="${eventIndex % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}">`;
+                    tableHtml += `<td class="sticky left-0 ${eventIndex % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'} px-3 py-2 border-b border-gray-100 font-medium text-gray-700 whitespace-nowrap">${eventName}</td>`;
+
+                    states.forEach((stateName) => {
+                        const cell = table.SEAT[eventName]?.[stateName];
+                        if (!cell) {
+                            tableHtml += '<td class="px-3 py-2 border-b border-gray-100 text-amber-600">未定义</td>';
+                            return;
+                        }
+                        const actionHtml = cell.A.map(a => `<span class="inline-block mr-1 mb-1 px-2 py-0.5 rounded bg-blue-50 text-blue-700">${a}</span>`).join('');
+                        const transitionBadge = `<span class="inline-block px-2 py-0.5 rounded bg-emerald-50 text-emerald-700">T: ${cell.T}</span>`;
+                        tableHtml += `<td class="px-3 py-2 border-b border-gray-100 text-gray-600"><div class="mb-1">${transitionBadge}</div><div>${actionHtml}</div></td>`;
+                    });
+
+                    tableHtml += '</tr>';
                 });
-                html += '</tr>';
-            });
-            html += '</tbody></table>';
-            document.getElementById('seat-table-container').innerHTML = html;
+
+                tableHtml += '</tbody></table>';
+
+                return `
+                    <section class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                        <div class="flex flex-wrap items-center gap-2 mb-2">
+                            <h4 class="text-sm md:text-base font-bold text-gray-800">${tableKey} · ${table.meta.title || ''}</h4>
+                            ${metaTags}
+                        </div>
+                        ${table.meta.description ? `<p class="text-xs text-gray-500 mb-2">${table.meta.description}</p>` : ''}
+                        ${symbolRows ? `<div class="text-xs text-gray-500 mb-3 space-y-1">${symbolRows}</div>` : ''}
+                        <div class="overflow-auto border border-gray-100 rounded-lg">${tableHtml}</div>
+                    </section>`;
+            }).join('<div class="h-3"></div>');
+
+            document.getElementById('seat-table-container').innerHTML = `<div class="p-3 md:p-4 bg-gray-50 space-y-3">${cardHtml}</div>`;
         }
 
         function renderVersionHistory() {
@@ -2151,112 +2106,85 @@
         }
 
         // --- 知识管理模块逻辑 ---
-        function initKnowledgeGraph() {
-            const dom = document.getElementById('knowledge-graph');
-            kgChart = echarts.init(dom);
-
-            const option = {
-                tooltip: {},
-                animationDurationUpdate: 1500,
-                animationEasingUpdate: 'quinticInOut',
-                series: [
-                    {
-                        type: 'graph',
-                        layout: 'force',
-                        force: {
-                            repulsion: 200,
-                            edgeLength: 100
-                        },
-                        data: [
-                            { name: 'ZIPC模型', symbolSize: 50, itemStyle: { color: '#3B82F6' } },
-                            { name: '状态定义', symbolSize: 30, itemStyle: { color: '#10B981' } },
-                            { name: '转移规则', symbolSize: 30, itemStyle: { color: '#10B981' } },
-                            { name: '需求工程', symbolSize: 40, itemStyle: { color: '#F59E0B' } },
-                            { name: '验证', symbolSize: 20 },
-                            { name: '推理', symbolSize: 20 },
-                            { name: '系统架构', symbolSize: 40, itemStyle: { color: '#6B7280' } }
-                        ],
-                        links: [
-                            { source: 'ZIPC模型', target: '状态定义' },
-                            { source: 'ZIPC模型', target: '转移规则' },
-                            { source: '状态定义', target: '验证' },
-                            { source: '转移规则', target: '推理' },
-                            { source: '需求工程', target: 'ZIPC模型' },
-                            { source: '系统架构', target: '需求工程' }
-                        ],
-                        roam: true,
-                        label: { show: true, position: 'right', formatter: '{b}' },
-                        lineStyle: { color: 'source', curveness: 0.3 }
-                    }
-                ]
-            };
-            kgChart.setOption(option);
+        function renderKnowledgeNavTree() {
+            const html = knowledgeDemoData.categories.map(category => {
+                const children = category.children.map(child => `<li class="p-1.5 hover:bg-gray-50 rounded cursor-pointer text-gray-600" onclick="selectKnowledgeItem('${child.id}')">${child.name}</li>`).join('');
+                return `<li><div class="flex items-center p-2 rounded text-gray-700 font-medium"><i class="fas fa-folder-open text-yellow-500 mr-2"></i>${category.name}</div><ul class="pl-6 mt-1 space-y-1 border-l border-gray-200 ml-3">${children}</ul></li>`;
+            }).join('');
+            document.getElementById('knowledge-nav-tree').innerHTML = html;
         }
 
-        function toggleKnowledgeView(view) {
-            state.knowledge.view = view;
-            const graphBtn = document.getElementById('view-graph');
-            const cardBtn = document.getElementById('view-card');
-            const graphDiv = document.getElementById('knowledge-graph-view');
-            const cardDiv = document.getElementById('knowledge-card-view');
+        function renderKnowledgeEntries() {
+            const keyword = (document.getElementById('knowledge-search-input')?.value || '').trim().toLowerCase();
+            const sortType = document.getElementById('knowledge-sort')?.value || 'updated';
+            const category = state.knowledge.selectedCategory;
+            let entries = [...knowledgeDemoData.entries];
+            if (category) entries = entries.filter(item => item.category === category);
+            if (keyword) entries = entries.filter(item => `${item.title} ${item.tag} ${item.definition} ${item.alias} ${item.related}`.toLowerCase().includes(keyword));
+            entries.sort((a,b) => sortType === 'priority' ? b.priority - a.priority : b.updated.localeCompare(a.updated));
 
-            if (view === 'graph') {
-                graphBtn.classList.add('text-primary', 'font-bold', 'border-b-2', 'border-primary');
-                graphBtn.classList.remove('text-gray-500');
-                cardBtn.classList.remove('text-primary', 'font-bold', 'border-b-2', 'border-primary');
-                cardBtn.classList.add('text-gray-500');
+            const cards = entries.map(item => `
+                <article class="bg-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition cursor-pointer" onclick="openTermDetail(true, '${item.id}')">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                        <span class="text-xs px-2 py-0.5 rounded bg-blue-100 text-blue-700">${item.tag}</span>
+                        <span class="text-xs text-gray-400">${item.status} · ${item.updated}</span>
+                    </div>
+                    <h4 class="font-semibold text-gray-800 mb-1">${item.title}</h4>
+                    <p class="text-sm text-gray-600 mb-2">${item.definition}</p>
+                    <div class="text-xs text-gray-500 mb-2"><b>别名：</b>${item.alias}</div>
+                    <div class="text-xs text-gray-500 mb-3"><b>相关术语：</b>${item.related}</div>
+                    <div class="text-xs text-gray-600 bg-gray-50 border border-gray-100 rounded p-3 leading-5">${item.contentHtml}</div>
+                    <div class="mt-3 text-xs text-gray-400">维护者：${item.owner} · 优先级 P${item.priority}</div>
+                </article>
+            `).join('');
 
-                graphDiv.classList.remove('hidden');
-                cardDiv.classList.add('hidden');
-                setTimeout(() => kgChart.resize(), 50);
-            } else {
-                cardBtn.classList.add('text-primary', 'font-bold', 'border-b-2', 'border-primary');
-                cardBtn.classList.remove('text-gray-500');
-                graphBtn.classList.remove('text-primary', 'font-bold', 'border-b-2', 'border-primary');
-                graphBtn.classList.add('text-gray-500');
-
-                cardDiv.classList.remove('hidden');
-                graphDiv.classList.add('hidden');
-            }
+            document.getElementById('knowledge-entry-list').innerHTML = cards || '<div class="text-sm text-gray-400 text-center p-6">未找到匹配条目</div>';
+            document.getElementById('knowledge-batch-preview').innerHTML = knowledgeDemoData.batchActions.map(i => `<li>• ${i}</li>`).join('');
         }
 
-        function zoomGraph(factor) {
-            if (kgChart) {
-                const option = kgChart.getOption();
-                kgChart.dispatchAction({
-                    type: 'dataZoom',
-                    batch: [{ start: 0, end: 100 * factor }]
-                });
-            }
-        }
+        function toggleKnowledgeView() { renderKnowledgeEntries(); }
+        function zoomGraph() {}
+        function filterKnowledgeEntries() { renderKnowledgeEntries(); }
 
         function selectKnowledgeItem(itemId) {
-            showToast(`已选择知识项: ${itemId}`, 'info');
+            state.knowledge.selectedCategory = itemId;
+            const item = knowledgeDemoData.entries.find(entry => entry.category === itemId);
+            document.getElementById('knowledge-current-item').textContent = item ? `${item.title}（${item.id}）` : `分类：${itemId}`;
+            renderKnowledgeEntries();
         }
 
-        function openKnowledgeModal(isEdit = false) {
+        function openTermDetail(isEdit = false, entryId = null) {
             const modal = document.getElementById('knowledge-modal');
             modal.classList.remove('hidden');
-            if (!isEdit) {
-                // 为新条目重置表单
-                modal.querySelector('input').value = '';
-                modal.querySelector('textarea').value = '';
-            }
+            if (!isEdit) return;
+            const entry = knowledgeDemoData.entries.find(item => item.id === entryId) || knowledgeDemoData.entries[0];
+            document.getElementById('term-title').value = entry.title;
+            document.getElementById('term-definition').value = entry.definition;
+            document.getElementById('term-synonyms').value = entry.alias;
+            document.getElementById('term-related').value = entry.related;
+            document.getElementById('term-example').value = entry.contentHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+            document.getElementById('term-scope').value = `分类：${entry.category}；来源：工程术语百科演示数据`;
         }
 
-        function closeKnowledgeModal() {
-            document.getElementById('knowledge-modal').classList.add('hidden');
+        function openKnowledgeBatchImport() { document.getElementById('knowledge-import-modal').classList.remove('hidden'); }
+        function closeKnowledgeBatchImport() { document.getElementById('knowledge-import-modal').classList.add('hidden'); }
+        function openBatchTool() { document.getElementById('knowledge-batch-modal').classList.remove('hidden'); }
+        function closeBatchTool() { document.getElementById('knowledge-batch-modal').classList.add('hidden'); }
+        function openPermissionConfig() { document.getElementById('knowledge-permission-modal').classList.remove('hidden'); renderPermissionRows(); }
+        function closePermissionConfig() { document.getElementById('knowledge-permission-modal').classList.add('hidden'); }
+
+        function renderPermissionRows() {
+            document.getElementById('permission-table-body').innerHTML = knowledgeDemoData.permissions.map(p => `<tr><td class="px-3 py-2 border-b">${p.role}</td><td class="px-3 py-2 border-b text-center">${p.view ? '✔' : '-'}</td><td class="px-3 py-2 border-b text-center">${p.edit ? '✔' : '-'}</td><td class="px-3 py-2 border-b text-center">${p.review ? '✔' : '-'}</td><td class="px-3 py-2 border-b text-center">${p.del ? '✔' : '-'}</td><td class="px-3 py-2 border-b text-center">${p.temp ? '✔' : '-'}</td></tr>`).join('');
         }
+
+        function closeKnowledgeModal() { document.getElementById('knowledge-modal').classList.add('hidden'); }
 
         function saveKnowledge() {
-            // 验证
-            const title = document.querySelector('#knowledge-modal input').value;
-            if (!title.trim()) {
-                showToast('标题为必填项', 'error');
-                return;
-            }
+            const title = document.getElementById('term-title').value;
+            if (!title.trim()) { showToast('术语名称为必填项', 'error'); return; }
             closeKnowledgeModal();
-            showToast('知识条目保存成功', 'success');
+            showToast('术语条目保存成功（演示）', 'success');
+            renderKnowledgeEntries();
         }
 
         // --- 系统管理模块逻辑 ---
