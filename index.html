@@ -377,15 +377,19 @@
 <div class="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
 <span class="text-primary font-medium">正在生成状态变迁矩阵...</span>
 </div>
-<!-- Sankey图容器 -->
-<div class="w-full h-[58%]" id="sankey-chart"></div>
-<div class="mt-3 h-[42%] bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+<div class="h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
 <div class="px-4 py-2 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
 <span class="text-sm font-semibold text-gray-700">SEAT模型表格视图</span>
+<div class="flex items-center gap-3">
+<button class="text-xs text-gray-500 hover:text-primary" onclick="toggleSankeyPanel()" id="toggle-sankey-btn">显示状态矩阵</button>
 <button class="text-xs text-primary hover:underline" onclick="openExportConfig()">导出配置</button>
+</div>
 </div>
 <div class="flex-1 overflow-auto" id="seat-table-container">
 <div class="p-4 text-sm text-gray-400">请先运行需求分析并生成SEAT模型</div>
+</div>
+<div class="hidden border-t border-gray-100 p-3" id="sankey-panel">
+<div class="w-full h-72" id="sankey-chart"></div>
 </div>
 </div>
 </div>
@@ -1740,6 +1744,20 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a'); a.href = url; a.download = 'zipc_matrix.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
             showToast('JSON 已成功保存', 'success');
+        }
+
+        function toggleSankeyPanel() {
+            const panel = document.getElementById('sankey-panel');
+            const btn = document.getElementById('toggle-sankey-btn');
+            const isHidden = panel.classList.contains('hidden');
+            if (isHidden) {
+                panel.classList.remove('hidden');
+                btn.textContent = '隐藏状态矩阵';
+                if (zipcChart) setTimeout(() => zipcChart.resize(), 30);
+            } else {
+                panel.classList.add('hidden');
+                btn.textContent = '显示状态矩阵';
+            }
         }
 
         function initZipcChart() {
