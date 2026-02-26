@@ -378,7 +378,7 @@
 <span class="text-primary font-medium">正在生成状态变迁矩阵...</span>
 </div>
 <!-- Sankey图容器 -->
-<div class="w-full h-[58%] bg-white rounded-xl shadow-sm border border-gray-200" id="sankey-chart"></div>
+<div class="w-full h-[58%]" id="sankey-chart"></div>
 <div class="mt-3 h-[42%] bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
 <div class="px-4 py-2 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
 <span class="text-sm font-semibold text-gray-700">SEAT模型表格视图</span>
@@ -1610,7 +1610,7 @@
                 return;
             }
             processZipcDataFromDemo();
-            renderSeatTable('主表0');
+            renderSeatTable();
             renderVersionHistory();
             showToast('SEAT模型已生成', 'success');
         }
@@ -1627,7 +1627,7 @@
             closeClarificationModal();
             showToast('澄清信息已记录：' + extra, 'info');
             processZipcDataFromDemo();
-            renderSeatTable('主表0');
+            renderSeatTable();
             renderVersionHistory();
         }
 
@@ -1648,22 +1648,57 @@
             renderStatePath(pathSequence);
         }
 
-        function renderSeatTable(tableKey='主表0') {
-            const table = zipcSeatDemo[tableKey];
+        function renderSeatTable() {
+            const tableOrder = ['主表0', '子表0.1'];
+            const html = tableOrder
+                .filter(key => zipcSeatDemo[key])
+                .map(key => renderSingleSeatTable(key, zipcSeatDemo[key]))
+                .join('');
+            document.getElementById('seat-table-container').innerHTML = html;
+        }
+
+        function renderSingleSeatTable(tableKey, table) {
             const states = table.S.map(s => s.name);
             const events = table.E;
-            let html = '<table class="min-w-full text-xs"><thead><tr class="bg-gray-50"><th class="px-3 py-2 text-left border-b">事件 / 状态</th>' + states.map(s=>`<th class="px-3 py-2 text-left border-b">${s}</th>`).join('') + '</tr></thead><tbody>';
-            events.forEach(e=>{
-                html += `<tr><td class="px-3 py-2 border-b font-medium text-gray-700">${e}</td>`;
-                states.forEach(st=>{
-                    const cell = table.SEAT[e]?.[st];
-                    const val = cell ? `T:${cell.T}<br>A:${cell.A.join('、')}` : 'null';
-                    html += `<td class="px-3 py-2 border-b text-gray-600">${val}</td>`;
+            const symbols = table.meta?.symbols || {};
+            const symbolRows = Object.entries(symbols).flatMap(([group, vals]) =>
+                Object.entries(vals).map(([symbol, desc]) => `<span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-blue-50 text-blue-700"><strong>${group}:${symbol}</strong><span>${desc}</span></span>`)
+            );
+
+            let rows = '';
+            events.forEach(eventName => {
+                rows += `<tr><td class="px-3 py-2 border-b font-medium text-gray-700 whitespace-nowrap">${eventName}</td>`;
+                states.forEach(stateName => {
+                    const cell = table.SEAT[eventName]?.[stateName];
+                    const transition = cell?.T ?? 'null';
+                    const actions = cell?.A?.length ? cell.A.join('、') : 'null';
+                    rows += `<td class="px-3 py-2 border-b align-top text-gray-600"><div><span class="text-gray-400">T:</span> ${transition}</div><div><span class="text-gray-400">A:</span> ${actions}</div></td>`;
                 });
-                html += '</tr>';
+                rows += '</tr>';
             });
             html += '</tbody></table>';
             document.getElementById('seat-table-container').innerHTML = html;
+        }
+
+            return `
+                <div class="p-3 border-b border-gray-100">
+                    <div class="text-center font-semibold text-gray-800">${tableKey}</div>
+                    <div class="text-center text-xs text-gray-500 mb-2">${table.meta?.title || ''}</div>
+                    <div class="text-xs text-gray-500 mb-2">初始状态：${table.meta?.initial || '-'}</div>
+                    ${symbolRows.length ? `<div class="flex flex-wrap gap-2 mb-3 text-xs">${symbolRows.join('')}</div>` : ''}
+                    <div class="overflow-auto">
+                        <table class="min-w-full text-xs border border-gray-200">
+                            <thead>
+                                <tr class="bg-gray-50">
+                                    <th class="px-3 py-2 text-left border-b border-r">事件 / 状态</th>
+                                    ${states.map(name => `<th class="px-3 py-2 text-left border-b border-r last:border-r-0 whitespace-nowrap">${name}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
         }
 
         function renderVersionHistory() {
