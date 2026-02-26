@@ -1680,6 +1680,9 @@
                 });
                 rows += '</tr>';
             });
+            html += '</tbody></table>';
+            document.getElementById('seat-table-container').innerHTML = html;
+        }
 
             return `
                 <div class="p-3 border-b border-gray-100">
