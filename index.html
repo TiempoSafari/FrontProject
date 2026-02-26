@@ -1,0 +1,2031 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ZIPC状态变迁矩阵生成与智能知识管理系统</title>
+<!-- 第三方库导入 -->
+<script src="https://image.uc.cn/s/uae/g/3n/mos-production/fontawesome-free-7.1.0-web/js/all.min.js"></script>
+<script src="https://image.uc.cn/s/uae/g/3n/mos-production/0915/3.4.17.js"></script>
+<script src="https://image.uc.cn/s/uae/g/3n/mos-production/0915/echarts.min.js"></script>
+<style>
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        /* 动画效果 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideInRight {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes slideInLeft {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        .slide-in-right {
+            animation: slideInRight 0.3s ease-out;
+        }
+        
+        .slide-in-left {
+            animation: slideInLeft 0.3s ease-out;
+        }
+
+        /* 打字光标效果 */
+        @keyframes blink {
+            50% { border-color: transparent; }
+        }
+        
+        .typing-cursor::after {
+            content: '|';
+            animation: blink 1s step-end infinite;
+        }
+
+        /* 骨架屏加载效果 */
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Toast通知 */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .toast {
+            min-width: 300px;
+            padding: 16px;
+            border-radius: 8px;
+            background: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            animation: slideInLeft 0.3s ease-out;
+            border-left: 4px solid #3B82F6;
+        }
+
+        /* 移动端侧边栏遮罩 */
+        #mobile-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 40;
+            display: none;
+        }
+
+        /* 侧边栏动画 */
+        .sidebar-transition {
+            transition: transform 0.3s ease-out;
+        }
+
+        /* 激活状态指示器 */
+        .nav-item.active {
+            background-color: #f0f9ff;
+            border-left-color: #3B82F6;
+            color: #1e40af;
+        }
+        
+        .nav-item.active i {
+            color: #3B82F6;
+        }
+    </style>
+<script>
+        // Tailwind配置
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#6B7280',
+                        success: '#10B981',
+                        warning: '#F59E0B',
+                        error: '#EF4444',
+                        info: '#06B6D4',
+                        bgLight: '#F9FAFB',
+                        bgWhite: '#FFFFFF',
+                        sidebar: '#1e293b'
+                    },
+                    fontFamily: {
+                        sans: ['"Microsoft YaHei"', '"Segoe UI"', 'Arial', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-bgLight text-gray-800 font-sans h-screen flex flex-col overflow-hidden">
+<!-- 移动端遮罩层 -->
+<div id="mobile-overlay" onclick="toggleSidebar()"></div>
+<!-- 顶部Header（移动端显示汉堡菜单） -->
+<header class="bg-white shadow-sm h-14 flex items-center justify-between px-4 md:hidden z-30">
+<div class="flex items-center gap-2">
+<button class="text-2xl text-gray-600" onclick="toggleSidebar()">
+<i class="fas fa-bars"></i>
+</button>
+<div class="flex items-center gap-2">
+<i class="fas fa-network-wired text-primary text-xl"></i>
+<h1 class="text-lg font-bold">ZIPC系统</h1>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center">
+<i class="fas fa-user text-sm"></i>
+</div>
+</div>
+</header>
+<!-- 主布局容器 -->
+<div class="flex flex-1 overflow-hidden">
+<!-- 左侧导航栏 -->
+<aside class="sidebar-transition bg-white border-r border-gray-200 w-64 flex flex-col h-full z-20 fixed md:relative md:translate-x-0 -translate-x-full md:flex" id="sidebar">
+<!-- Logo区域 -->
+<div class="p-5 border-b border-gray-100 flex items-center gap-3">
+<div class="w-10 h-10 bg-primary text-white rounded-lg flex items-center justify-center">
+<i class="fas fa-network-wired text-lg"></i>
+</div>
+<div>
+<h2 class="font-bold text-gray-800 text-lg">ZIPC系统</h2>
+<p class="text-xs text-gray-500">状态变迁矩阵与知识管理</p>
+</div>
+</div>
+<!-- 用户信息区域 -->
+<div class="p-4 border-b border-gray-100 flex items-center gap-3">
+<div class="w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center">
+<i class="fas fa-user"></i>
+</div>
+<div class="flex-1">
+<p class="font-medium text-gray-800 text-sm">王志B</p>
+<p class="text-xs text-gray-500">管理员</p>
+</div>
+</div>
+<!-- 导航菜单 -->
+<nav class="flex-1 overflow-y-auto p-4 space-y-1">
+<!-- 核心功能 -->
+<div class="text-xs font-semibold text-gray-400 uppercase mb-2 px-2">核心功能</div>
+<button class="nav-item w-full text-left flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-gray-50 hover:text-primary transition active" onclick="switchTab('zipc')">
+<i class="fas fa-matrix-group text-gray-500 w-5 text-center"></i>
+<span class="font-medium">ZIPC矩阵生成</span>
+</button>
+<button class="nav-item w-full text-left flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-gray-50 hover:text-primary transition" onclick="switchTab('qa')">
+<i class="fas fa-comments text-gray-500 w-5 text-center"></i>
+<span class="font-medium">需求智能问答</span>
+</button>
+<button class="nav-item w-full text-left flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-gray-50 hover:text-primary transition" onclick="switchTab('knowledge')">
+<i class="fas fa-book-open text-gray-500 w-5 text-center"></i>
+<span class="font-medium">知识管理</span>
+</button>
+<!-- 新增功能 -->
+<div class="text-xs font-semibold text-gray-400 uppercase mb-2 px-2 mt-6">文件与项目</div>
+<button class="nav-item w-full text-left flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-gray-50 hover:text-primary transition" onclick="switchTab('upload')">
+<i class="fas fa-upload text-gray-500 w-5 text-center"></i>
+<span class="font-medium">文件上传</span>
+<span class="ml-auto text-xs bg-primary text-white rounded-full px-2 py-0.5">新</span>
+</button>
+<button class="nav-item w-full text-left flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-gray-50 hover:text-primary transition" onclick="switchTab('projects')">
+<i class="fas fa-folder-tree text-gray-500 w-5 text-center"></i>
+<span class="font-medium">项目管理</span>
+</button>
+<!-- 模型与系统 -->
+<div class="text-xs font-semibold text-gray-400 uppercase mb-2 px-2 mt-6">系统管理</div>
+<button class="nav-item w-full text-left flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-gray-50 hover:text-primary transition" onclick="switchTab('models')">
+<i class="fas fa-cube text-gray-500 w-5 text-center"></i>
+<span class="font-medium">模型管理</span>
+</button>
+<button class="nav-item w-full text-left flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-gray-50 hover:text-primary transition" onclick="switchTab('profile')">
+<i class="fas fa-user text-gray-500 w-5 text-center"></i>
+<span class="font-medium">个人中心</span>
+</button>
+<button class="nav-item w-full text-left flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-gray-50 hover:text-primary transition" onclick="switchTab('admin')">
+<i class="fas fa-cogs text-gray-500 w-5 text-center"></i>
+<span class="font-medium">系统管理</span>
+<span class="ml-auto text-xs bg-warning text-white rounded-full px-2 py-0.5">管理员</span>
+</button>
+</nav>
+<!-- 底部信息 -->
+<div class="p-4 border-t border-gray-100">
+<div class="text-xs text-gray-500 mb-2">
+<div class="flex justify-between mb-1">
+<span>版本</span>
+<span class="font-medium">v2.1.0</span>
+</div>
+<div class="flex justify-between">
+<span>最后更新</span>
+<span>2026-02-25</span>
+</div>
+</div>
+<button class="w-full text-left text-sm text-gray-600 hover:text-primary flex items-center gap-2 mt-3" onclick="showToast('已检查更新，当前为最新版本', 'info')">
+<i class="fas fa-sync-alt"></i>
+<span>检查更新</span>
+</button>
+</div>
+</aside>
+<!-- 主内容区域 -->
+<main class="flex-1 overflow-hidden flex flex-col">
+<!-- 模块切换区域 -->
+<div class="h-full">
+<!-- MODULE 1: ZIPC矩阵生成 -->
+<section class="w-full h-full flex flex-col absolute inset-0 transition-opacity duration-300 z-10" id="module-zipc">
+<div class="flex-1 flex flex-col md:flex-row h-full overflow-hidden">
+<!-- 左侧控制面板 -->
+<aside class="w-full md:w-[35%] bg-white border-r border-gray-200 flex flex-col h-full overflow-y-auto z-20">
+<div class="p-6 space-y-6">
+<!-- 文档输入 -->
+<div>
+<label class="block text-sm font-semibold text-gray-700 mb-2">
+<i class="fas fa-file-lines mr-1"></i>需求文档输入
+                                    </label>
+<div class="text-xs text-gray-500 mb-2">主流程和工作流图</div>
+<div class="border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent transition">
+<textarea class="w-full h-48 p-3 text-sm resize-none outline-none font-mono" id="zipc-input" placeholder="在此粘贴需求文档或状态流描述..."></textarea>
+<div class="bg-gray-50 px-3 py-2 border-t border-gray-200 flex justify-between items-center">
+<span class="text-xs text-gray-500">支持 TXT/PDF/DOCX</span>
+<button class="text-primary text-xs hover:underline font-medium" onclick="document.getElementById('file-upload').click()">
+<i class="fas fa-upload mr-1"></i>上传文件
+                                            </button>
+<input accept=".txt,.pdf,.docx" class="hidden" id="file-upload" onchange="handleFileUpload(this)" type="file"/>
+</div>
+</div>
+</div>
+<!-- 参数设置 -->
+<div>
+<label class="block text-sm font-semibold text-gray-700 mb-2">
+                                        Temperature 参数
+                                    </label>
+<div class="flex items-center gap-4">
+<input class="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary" id="temp-slider" max="1" min="0" oninput="updateTempValue(this.value)" step="0.1" type="range" value="0.2"/>
+<input class="w-16 px-2 py-1 border border-gray-300 rounded text-center text-sm focus:ring-1 focus:ring-primary outline-none" id="temp-input" max="1" min="0" onchange="updateTempValue(this.value)" step="0.1" type="number" value="0.2"/>
+</div>
+<div class="text-xs text-gray-500 mt-1">范围: 0.0 ~ 1.0</div>
+</div>
+<!-- 操作按钮 -->
+<div class="space-y-3">
+<button class="w-full bg-primary hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg shadow transition flex justify-center items-center gap-2" id="btn-run" onclick="runGeneration()">
+<i class="fas fa-play"></i> 运行生成（校验/推理/查询）
+                                    </button>
+<div class="grid grid-cols-2 gap-3">
+<button class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-2 px-4 rounded-lg transition text-sm" onclick="exportData('json')">
+<i class="fas fa-file-code mr-1"></i> 保存 JSON
+                                        </button>
+<button class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-2 px-4 rounded-lg transition text-sm" onclick="exportData('zip')">
+<i class="fas fa-file-archive mr-1"></i> 导出 ZIP/TXT
+                                        </button>
+</div>
+</div>
+<!-- 元信息 -->
+<div class="pt-4 border-t border-gray-100">
+<div class="flex justify-between text-xs text-gray-500 mb-1">
+<span>创建者: 王志B</span>
+<span>2026年2月25日创建</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- 右侧可视化区域 -->
+<div class="w-full md:w-[65%] bg-bgLight flex flex-col h-full overflow-hidden relative">
+<!-- 工具栏 -->
+<div class="h-12 bg-white border-b border-gray-200 flex items-center justify-between px-4 shadow-sm z-10">
+<h2 class="font-bold text-gray-700">状态转移矩阵（ZPC 模型）</h2>
+<div class="flex gap-2">
+<button class="text-gray-500 hover:text-primary" onclick="resetZipcView()" title="重置视图">
+<i class="fas fa-compress"></i>
+</button>
+<button class="text-gray-500 hover:text-primary" onclick="downloadChartImage()" title="下载图片">
+<i class="fas fa-camera"></i>
+</button>
+</div>
+</div>
+<!-- 可视化内容 -->
+<div class="flex-1 overflow-hidden relative p-4">
+<!-- 加载覆盖层 -->
+<div class="absolute inset-0 bg-white/80 z-20 hidden flex-col items-center justify-center" id="zipc-loading">
+<div class="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+<span class="text-primary font-medium">正在生成状态变迁矩阵...</span>
+</div>
+<!-- Sankey图容器 -->
+<div class="w-full h-full bg-white rounded-xl shadow-sm border border-gray-200" id="sankey-chart"></div>
+</div>
+<!-- 状态路径面板 -->
+<div class="h-1/3 bg-white border-t border-gray-200 flex flex-col shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-10">
+<div class="px-4 py-2 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+<span class="text-xs font-bold text-gray-500 uppercase">操作人 | 状态</span>
+<span class="text-sm font-medium text-primary" id="current-state-text">当前状态：等待执行任务创建</span>
+</div>
+<div class="flex-1 overflow-y-auto p-4">
+<div class="flex flex-wrap gap-2 items-center text-sm" id="state-path-container">
+<!-- 动态状态节点将在这里注入 -->
+<span class="text-gray-400 italic">暂无数据，请点击"运行生成"</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- MODULE 2: 需求智能问答 -->
+<section class="w-full h-full flex flex-col md:flex-row absolute inset-0 opacity-0 pointer-events-none transition-opacity duration-300 bg-bgLight" id="module-qa">
+<!-- 左侧：历史记录 -->
+<aside class="w-full md:w-[30%] bg-white border-r border-gray-200 flex flex-col h-full z-20">
+<div class="p-4 border-b border-gray-100">
+<div class="relative">
+<input class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-primary outline-none" placeholder="搜索历史记录..." type="text"/>
+<i class="fas fa-search absolute left-3 top-2.5 text-gray-400 text-xs"></i>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto">
+<div class="px-4 py-2 text-xs font-bold text-gray-400 uppercase">今天</div>
+<div class="px-2 space-y-1">
+<div class="p-3 rounded-lg hover:bg-blue-50 cursor-pointer group transition bg-blue-50 border-l-4 border-primary" onclick="loadChatHistory('zipc-question')">
+<div class="text-sm font-medium text-gray-800 truncate">ZIPC状态机配置问题</div>
+<div class="text-xs text-gray-500 mt-1 flex justify-between">
+<span>10:30</span>
+<i class="far fa-star text-gray-300 group-hover:text-yellow-400"></i>
+</div>
+</div>
+<div class="p-3 rounded-lg hover:bg-gray-50 cursor-pointer group transition border-l-4 border-transparent" onclick="loadChatHistory('export-question')">
+<div class="text-sm font-medium text-gray-800 truncate">如何导出矩阵数据？</div>
+<div class="text-xs text-gray-500 mt-1 flex justify-between">
+<span>09:15</span>
+<i class="far fa-star text-gray-300 group-hover:text-yellow-400"></i>
+</div>
+</div>
+</div>
+<div class="px-4 py-2 text-xs font-bold text-gray-400 uppercase mt-4">过去7天</div>
+<div class="px-2 space-y-1">
+<div class="p-3 rounded-lg hover:bg-gray-50 cursor-pointer group transition border-l-4 border-transparent" onclick="loadChatHistory('knowledge-question')">
+<div class="text-sm font-medium text-gray-800 truncate">知识图谱节点关联逻辑</div>
+<div class="text-xs text-gray-500 mt-1 flex justify-between">
+<span>2月24日</span>
+<i class="far fa-star text-gray-300 group-hover:text-yellow-400"></i>
+</div>
+</div>
+</div>
+</div>
+<div class="p-4 border-t border-gray-200">
+<button class="w-full text-left text-sm text-gray-600 hover:text-primary flex items-center gap-2" onclick="startNewChat()">
+<i class="fas fa-plus"></i> 新建对话
+                            </button>
+</div>
+</aside>
+<!-- 右侧：聊天界面 -->
+<div class="w-full md:w-[70%] flex flex-col h-full bg-white">
+<!-- 聊天头部 -->
+<div class="h-14 bg-primary text-white flex items-center px-6 shadow-md flex-shrink-0">
+<span class="font-bold text-lg">需求智能问答</span>
+<span class="ml-auto text-sm opacity-80"><i class="fas fa-robot mr-1"></i>AI 助手在线</span>
+</div>
+<!-- 消息区域 -->
+<div class="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50" id="chat-messages">
+<!-- 欢迎消息 -->
+<div class="flex items-start gap-4">
+<div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center flex-shrink-0">
+<i class="fas fa-robot"></i>
+</div>
+<div class="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 max-w-[80%]">
+<p class="text-gray-700 text-sm leading-relaxed">您好！我是您的智能需求助手。您可以询问关于ZIPC状态变迁矩阵、需求文档解析或知识库管理的任何问题。</p>
+</div>
+</div>
+</div>
+<!-- 输入区域 -->
+<div class="p-4 bg-white border-t border-gray-200">
+<div class="relative flex items-end gap-2 bg-gray-50 p-2 rounded-xl border border-gray-200 focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent transition">
+<button class="p-2 text-gray-400 hover:text-primary transition" title="上传图片">
+<i class="far fa-image"></i>
+</button>
+<button class="p-2 text-gray-400 hover:text-primary transition" title="语音输入">
+<i class="fas fa-microphone"></i>
+</button>
+<textarea class="flex-1 bg-transparent border-none outline-none text-sm resize-none py-2 max-h-32" id="chat-input" placeholder="请输入您的问题…" rows="1"></textarea>
+<button class="p-2 bg-primary text-white rounded-lg hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed" id="btn-send" onclick="sendMessage()">
+<i class="fas fa-paper-plane"></i>
+</button>
+</div>
+<div class="text-center mt-2">
+<span class="text-xs text-gray-400">AI生成内容可能不准确，请核实重要信息。</span>
+</div>
+</div>
+</div>
+</section>
+<!-- MODULE 3: 知识管理 -->
+<section class="w-full h-full flex flex-col md:flex-row absolute inset-0 opacity-0 pointer-events-none transition-opacity duration-300 bg-bgLight" id="module-knowledge">
+<!-- 左侧：树形导航 -->
+<aside class="w-full md:w-[30%] bg-white border-r border-gray-200 flex flex-col h-full z-20">
+<div class="p-4 border-b border-gray-100">
+<div class="flex justify-between items-center mb-3">
+<h3 class="font-bold text-gray-700">知识库分类</h3>
+<button class="text-xs text-primary hover:underline" onclick="openKnowledgeModal()">+ 新建</button>
+</div>
+<div class="relative">
+<input class="w-full pl-8 pr-4 py-1.5 bg-gray-50 border border-gray-200 rounded text-xs focus:ring-1 focus:ring-primary outline-none" placeholder="搜索知识..." type="text"/>
+<i class="fas fa-search absolute left-2.5 top-2 text-gray-400 text-xs"></i>
+</div>
+</div>
+<!-- 树形结构 -->
+<div class="flex-1 overflow-y-auto p-2">
+<ul class="space-y-1 text-sm">
+<li>
+<div class="flex items-center p-2 hover:bg-gray-50 rounded cursor-pointer text-gray-700 font-medium">
+<i class="fas fa-folder-open text-yellow-500 mr-2"></i> 全部知识
+                                    </div>
+<ul class="pl-6 mt-1 space-y-1 border-l border-gray-200 ml-3">
+<li>
+<div class="flex items-center p-1.5 hover:bg-blue-50 rounded cursor-pointer text-gray-600 bg-blue-50 text-primary">
+<i class="fas fa-folder text-blue-400 mr-2"></i> ZIPC模型规范
+                                            </div>
+<ul class="pl-6 mt-1 space-y-1 border-l border-gray-200 ml-3">
+<li class="p-1.5 hover:bg-gray-50 rounded cursor-pointer text-gray-500" onclick="selectKnowledgeItem('state-definition')">状态定义</li>
+<li class="p-1.5 hover:bg-gray-50 rounded cursor-pointer text-gray-500" onclick="selectKnowledgeItem('transition-rules')">转移规则</li>
+</ul>
+</li>
+<li>
+<div class="flex items-center p-1.5 hover:bg-gray-50 rounded cursor-pointer text-gray-600">
+<i class="fas fa-folder text-blue-400 mr-2"></i> 需求工程
+                                            </div>
+</li>
+<li>
+<div class="flex items-center p-1.5 hover:bg-gray-50 rounded cursor-pointer text-gray-600">
+<i class="fas fa-folder text-blue-400 mr-2"></i> 系统架构
+                                            </div>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</aside>
+<!-- 右侧：图谱与卡片 -->
+<div class="w-full md:w-[70%] flex flex-col h-full overflow-hidden">
+<!-- 视图切换 -->
+<div class="h-12 bg-white border-b border-gray-200 flex items-center justify-between px-4">
+<div class="flex gap-4 text-sm">
+<button class="text-primary font-bold border-b-2 border-primary pb-3.5 -mb-3.5" id="view-graph" onclick="toggleKnowledgeView('graph')">图谱视图</button>
+<button class="text-gray-500 hover:text-gray-700 pb-3.5 -mb-3.5" id="view-card" onclick="toggleKnowledgeView('card')">卡片列表</button>
+</div>
+<div class="flex gap-2">
+<select class="text-xs border border-gray-200 rounded px-2 py-1 outline-none">
+<option>按时间排序</option>
+<option>按相关性排序</option>
+</select>
+</div>
+</div>
+<!-- 图谱视图 -->
+<div class="flex-1 relative bg-gray-50 overflow-hidden" id="knowledge-graph-view">
+<div class="w-full h-full" id="knowledge-graph"></div>
+<!-- 浮动控制按钮 -->
+<div class="absolute bottom-4 right-4 flex flex-col gap-2">
+<button class="w-8 h-8 bg-white rounded shadow text-gray-600 hover:text-primary" onclick="zoomGraph(1.2)"><i class="fas fa-plus"></i></button>
+<button class="w-8 h-8 bg-white rounded shadow text-gray-600 hover:text-primary" onclick="zoomGraph(0.8)"><i class="fas fa-minus"></i></button>
+</div>
+</div>
+<!-- 卡片视图（默认隐藏） -->
+<div class="flex-1 overflow-y-auto p-6 hidden" id="knowledge-card-view">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+<!-- 卡片1 -->
+<div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition cursor-pointer" onclick="openKnowledgeModal(true)">
+<div class="flex justify-between items-start mb-2">
+<span class="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded">ZIPC规范</span>
+<i class="fas fa-ellipsis text-gray-400"></i>
+</div>
+<h4 class="font-bold text-gray-800 mb-1">状态机基础定义</h4>
+<p class="text-xs text-gray-500 line-clamp-2 mb-3">本文档详细定义了ZIPC模型中的基础状态节点及其属性，包括初始状态、中间状态和终止状态的判定标准。</p>
+<div class="flex items-center justify-between text-xs text-gray-400">
+<span><i class="far fa-user mr-1"></i>王志B</span>
+<span>2026-02-24</span>
+</div>
+</div>
+<!-- 卡片2 -->
+<div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition cursor-pointer" onclick="openKnowledgeModal(true)">
+<div class="flex justify-between items-start mb-2">
+<span class="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded">案例研究</span>
+<i class="fas fa-ellipsis text-gray-400"></i>
+</div>
+<h4 class="font-bold text-gray-800 mb-1">电商订单状态流转</h4>
+<p class="text-xs text-gray-500 line-clamp-2 mb-3">基于ZIPC模型实现的电商订单状态变迁实例，包含支付、发货、退款等复杂场景的处理逻辑。</p>
+<div class="flex items-center justify-between text-xs text-gray-400">
+<span><i class="far fa-user mr-1"></i>李明</span>
+<span>2026-02-20</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- MODULE 4: 文件上传 -->
+<section class="w-full h-full absolute inset-0 opacity-0 pointer-events-none transition-opacity duration-300 bg-bgLight" id="module-upload">
+<div class="h-full p-6">
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 h-full flex flex-col">
+<div class="p-6 border-b border-gray-100">
+<h2 class="text-xl font-bold text-gray-800 mb-2">文件上传中心</h2>
+<p class="text-gray-600 text-sm">支持批量上传需求文档、配置文件、数据样本等资源</p>
+</div>
+<div class="flex-1 p-6 overflow-y-auto">
+<!-- 上传区域 -->
+<div class="border-2 border-dashed border-gray-300 rounded-2xl p-10 text-center bg-gray-50 hover:bg-gray-100 transition cursor-pointer" onclick="document.getElementById('bulk-upload').click()">
+<i class="fas fa-cloud-upload-alt text-5xl text-gray-400 mb-4"></i>
+<h3 class="text-lg font-medium text-gray-700 mb-2">点击或拖放文件到此区域</h3>
+<p class="text-gray-500 text-sm mb-4">支持 TXT, PDF, DOCX, JSON, CSV 格式，单个文件不超过 100MB</p>
+<button class="bg-primary text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-600 transition">
+<i class="fas fa-upload mr-2"></i>选择文件
+                                    </button>
+<input class="hidden" id="bulk-upload" multiple="" onchange="handleBulkUpload(this)" type="file"/>
+</div>
+<!-- 上传队列 -->
+<div class="mt-8">
+<h4 class="font-bold text-gray-700 mb-4">上传队列 (3)</h4>
+<div class="space-y-3">
+<div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg">
+<div class="flex items-center gap-3">
+<i class="fas fa-file-pdf text-red-500 text-xl"></i>
+<div>
+<p class="font-medium text-gray-800">需求文档_v2.pdf</p>
+<p class="text-xs text-gray-500">15.2 MB • 正在上传: 65%</p>
+</div>
+</div>
+<div class="w-24 bg-gray-200 rounded-full h-2">
+<div class="bg-primary h-2 rounded-full" style="width: 65%"></div>
+</div>
+</div>
+<div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg">
+<div class="flex items-center gap-3">
+<i class="fas fa-file-code text-blue-500 text-xl"></i>
+<div>
+<p class="font-medium text-gray-800">config.json</p>
+<p class="text-xs text-gray-500">2.1 MB • 已完成</p>
+</div>
+</div>
+<i class="fas fa-check-circle text-success text-xl"></i>
+</div>
+<div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg">
+<div class="flex items-center gap-3">
+<i class="fas fa-file-alt text-gray-500 text-xl"></i>
+<div>
+<p class="font-medium text-gray-800">状态定义.txt</p>
+<p class="text-xs text-gray-500">0.8 MB • 等待中</p>
+</div>
+</div>
+<i class="fas fa-clock text-warning text-xl"></i>
+</div>
+</div>
+</div>
+<!-- 最近上传 -->
+<div class="mt-8">
+<h4 class="font-bold text-gray-700 mb-4">最近上传的文件</h4>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+<div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+<div class="flex justify-between items-start mb-3">
+<i class="fas fa-file-word text-blue-600 text-2xl"></i>
+<span class="text-xs text-gray-500">昨天</span>
+</div>
+<p class="font-medium text-gray-800 mb-1">项目需求文档.docx</p>
+<p class="text-xs text-gray-500">12.5 MB</p>
+</div>
+<div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+<div class="flex justify-between items-start mb-3">
+<i class="fas fa-file-excel text-green-600 text-2xl"></i>
+<span class="text-xs text-gray-500">2天前</span>
+</div>
+<p class="font-medium text-gray-800 mb-1">状态矩阵数据.xlsx</p>
+<p class="text-xs text-gray-500">8.7 MB</p>
+</div>
+<div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+<div class="flex justify-between items-start mb-3">
+<i class="fas fa-file-archive text-yellow-600 text-2xl"></i>
+<span class="text-xs text-gray-500">1周前</span>
+</div>
+<p class="font-medium text-gray-800 mb-1">项目模板.zip</p>
+<p class="text-xs text-gray-500">45.3 MB</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- MODULE 5: 项目管理 -->
+<section class="w-full h-full absolute inset-0 opacity-0 pointer-events-none transition-opacity duration-300 bg-bgLight" id="module-projects">
+<div class="h-full p-6">
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 h-full flex flex-col">
+<div class="p-6 border-b border-gray-100 flex justify-between items-center">
+<div>
+<h2 class="text-xl font-bold text-gray-800 mb-2">项目管理</h2>
+<p class="text-gray-600 text-sm">管理所有ZIPC相关项目，跟踪进度与协作</p>
+</div>
+<button class="bg-primary text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-600 transition flex items-center gap-2">
+<i class="fas fa-plus"></i> 新建项目
+                                </button>
+</div>
+<div class="flex-1 p-6 overflow-y-auto">
+<!-- 项目统计 -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+<div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-sm text-blue-700 font-medium">进行中</p>
+<p class="text-2xl font-bold text-blue-800 mt-1">12</p>
+</div>
+<i class="fas fa-tasks text-blue-500 text-2xl"></i>
+</div>
+</div>
+<div class="bg-green-50 p-4 rounded-xl border border-green-100">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-sm text-green-700 font-medium">已完成</p>
+<p class="text-2xl font-bold text-green-800 mt-1">28</p>
+</div>
+<i class="fas fa-check-circle text-green-500 text-2xl"></i>
+</div>
+</div>
+<div class="bg-yellow-50 p-4 rounded-xl border border-yellow-100">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-sm text-yellow-700 font-medium">待审核</p>
+<p class="text-2xl font-bold text-yellow-800 mt-1">5</p>
+</div>
+<i class="fas fa-clock text-yellow-500 text-2xl"></i>
+</div>
+</div>
+<div class="bg-gray-50 p-4 rounded-xl border border-gray-100">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-sm text-gray-700 font-medium">总项目</p>
+<p class="text-2xl font-bold text-gray-800 mt-1">45</p>
+</div>
+<i class="fas fa-folder text-gray-500 text-2xl"></i>
+</div>
+</div>
+</div>
+<!-- 项目列表 -->
+<div class="overflow-x-auto">
+<table class="w-full text-sm text-left text-gray-500">
+<thead class="text-xs text-gray-700 uppercase bg-gray-50">
+<tr>
+<th class="px-6 py-3">项目名称</th>
+<th class="px-6 py-3">负责人</th>
+<th class="px-6 py-3">状态</th>
+<th class="px-6 py-3">截止日期</th>
+<th class="px-6 py-3">进度</th>
+<th class="px-6 py-3">操作</th>
+</tr>
+</thead>
+<tbody>
+<tr class="bg-white border-b hover:bg-gray-50">
+<td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
+<div class="flex items-center gap-3">
+<i class="fas fa-folder text-blue-500"></i>
+<span>ZIPC电商订单系统</span>
+</div>
+</td>
+<td class="px-6 py-4">王志B</td>
+<td class="px-6 py-4">
+<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">进行中</span>
+</td>
+<td class="px-6 py-4">2026-03-15</td>
+<td class="px-6 py-4">
+<div class="w-32 bg-gray-200 rounded-full h-2">
+<div class="bg-primary h-2 rounded-full" style="width: 75%"></div>
+</div>
+<span class="text-xs text-gray-500 ml-2">75%</span>
+</td>
+<td class="px-6 py-4">
+<button class="text-primary hover:underline text-sm">查看</button>
+</td>
+</tr>
+<tr class="bg-white border-b hover:bg-gray-50">
+<td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
+<div class="flex items-center gap-3">
+<i class="fas fa-folder text-green-500"></i>
+<span>知识图谱构建V2</span>
+</div>
+</td>
+<td class="px-6 py-4">李明</td>
+<td class="px-6 py-4">
+<span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">已完成</span>
+</td>
+<td class="px-6 py-4">2026-02-20</td>
+<td class="px-6 py-4">
+<div class="w-32 bg-gray-200 rounded-full h-2">
+<div class="bg-success h-2 rounded-full" style="width: 100%"></div>
+</div>
+<span class="text-xs text-gray-500 ml-2">100%</span>
+</td>
+<td class="px-6 py-4">
+<button class="text-primary hover:underline text-sm">查看</button>
+</td>
+</tr>
+<tr class="bg-white border-b hover:bg-gray-50">
+<td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
+<div class="flex items-center gap-3">
+<i class="fas fa-folder text-yellow-500"></i>
+<span>状态机验证工具</span>
+</div>
+</td>
+<td class="px-6 py-4">张伟</td>
+<td class="px-6 py-4">
+<span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">待审核</span>
+</td>
+<td class="px-6 py-4">2026-03-01</td>
+<td class="px-6 py-4">
+<div class="w-32 bg-gray-200 rounded-full h-2">
+<div class="bg-warning h-2 rounded-full" style="width: 90%"></div>
+</div>
+<span class="text-xs text-gray-500 ml-2">90%</span>
+</td>
+<td class="px-6 py-4">
+<button class="text-primary hover:underline text-sm">审核</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- MODULE 6: 模型管理 -->
+<section class="w-full h-full absolute inset-0 opacity-0 pointer-events-none transition-opacity duration-300 bg-bgLight" id="module-models">
+<div class="h-full p-6">
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 h-full flex flex-col">
+<div class="p-6 border-b border-gray-100">
+<h2 class="text-xl font-bold text-gray-800 mb-2">模型管理</h2>
+<p class="text-gray-600 text-sm">管理ZIPC模型配置、训练参数和版本控制</p>
+</div>
+<div class="flex-1 p-6 overflow-y-auto">
+<!-- 模型卡片 -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<div class="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition cursor-pointer">
+<div class="flex justify-between items-start mb-4">
+<i class="fas fa-cube text-3xl text-primary"></i>
+<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">生产环境</span>
+</div>
+<h3 class="font-bold text-gray-800 text-lg mb-2">ZIPC基础模型 v2.1</h3>
+<p class="text-gray-600 text-sm mb-4">适用于通用状态机场景的基础模型，支持大多数业务需求</p>
+<div class="flex justify-between text-xs text-gray-500">
+<span><i class="fas fa-calendar mr-1"></i>更新: 2026-02-20</span>
+<span><i class="fas fa-database mr-1"></i>大小: 245MB</span>
+</div>
+</div>
+<div class="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition cursor-pointer">
+<div class="flex justify-between items-start mb-4">
+<i class="fas fa-cube text-3xl text-success"></i>
+<span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">测试环境</span>
+</div>
+<h3 class="font-bold text-gray-800 text-lg mb-2">ZIPC电商优化版 v1.5</h3>
+<p class="text-gray-600 text-sm mb-4">针对电商订单场景优化的专用模型，支持复杂状态流转</p>
+<div class="flex justify-between text-xs text-gray-500">
+<span><i class="fas fa-calendar mr-1"></i>更新: 2026-02-18</span>
+<span><i class="fas fa-database mr-1"></i>大小: 312MB</span>
+</div>
+</div>
+<div class="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition cursor-pointer">
+<div class="flex justify-between items-start mb-4">
+<i class="fas fa-cube text-3xl text-warning"></i>
+<span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">开发中</span>
+</div>
+<h3 class="font-bold text-gray-800 text-lg mb-2">ZIPC金融风控版 v0.9</h3>
+<p class="text-gray-600 text-sm mb-4">面向金融风控场景的高安全模型，支持实时风险拦截</p>
+<div class="flex justify-between text-xs text-gray-500">
+<span><i class="fas fa-calendar mr-1"></i>更新: 2026-02-25</span>
+<span><i class="fas fa-database mr-1"></i>大小: 428MB</span>
+</div>
+</div>
+</div>
+<!-- 模型训练记录 -->
+<div class="mt-8">
+<h4 class="font-bold text-gray-700 mb-4">最近训练记录</h4>
+<div class="bg-gray-50 rounded-xl p-4">
+<div class="overflow-x-auto">
+<table class="w-full text-sm text-gray-500">
+<thead>
+<tr class="text-xs text-gray-700">
+<th class="px-4 py-2">模型名称</th>
+<th class="px-4 py-2">训练时间</th>
+<th class="px-4 py-2">准确率</th>
+<th class="px-4 py-2">状态</th>
+<th class="px-4 py-2">操作</th>
+</tr>
+</thead>
+<tbody>
+<tr class="border-b border-gray-200">
+<td class="px-4 py-3 font-medium text-gray-800">ZIPC基础模型 v2.1</td>
+<td class="px-4 py-3">2026-02-20 14:30</td>
+<td class="px-4 py-3">
+<span class="font-medium text-success">96.7%</span>
+</td>
+<td class="px-4 py-3">
+<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">已完成</span>
+</td>
+<td class="px-4 py-3">
+<button class="text-primary hover:underline text-xs">查看日志</button>
+</td>
+</tr>
+<tr class="border-b border-gray-200">
+<td class="px-4 py-3 font-medium text-gray-800">ZIPC电商优化版 v1.5</td>
+<td class="px-4 py-3">2026-02-18 09:15</td>
+<td class="px-4 py-3">
+<span class="font-medium text-success">94.2%</span>
+</td>
+<td class="px-4 py-3">
+<span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">已部署</span>
+</td>
+<td class="px-4 py-3">
+<button class="text-primary hover:underline text-xs">导出模型</button>
+</td>
+</tr>
+<tr>
+<td class="px-4 py-3 font-medium text-gray-800">ZIPC金融风控版 v0.9</td>
+<td class="px-4 py-3">2026-02-25 16:45</td>
+<td class="px-4 py-3">
+<span class="font-medium text-warning">87.3%</span>
+</td>
+<td class="px-4 py-3">
+<span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">训练中</span>
+</td>
+<td class="px-4 py-3">
+<button class="text-primary hover:underline text-xs">监控</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- MODULE 7: 个人中心 -->
+<section class="w-full h-full absolute inset-0 opacity-0 pointer-events-none transition-opacity duration-300 bg-bgLight" id="module-profile">
+<div class="h-full p-6">
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 h-full flex flex-col">
+<div class="p-6 border-b border-gray-100">
+<h2 class="text-xl font-bold text-gray-800 mb-2">个人中心</h2>
+<p class="text-gray-600 text-sm">管理您的个人信息、账户设置和安全选项</p>
+</div>
+<div class="flex-1 p-6 overflow-y-auto">
+<div class="max-w-3xl mx-auto">
+<!-- 个人信息 -->
+<div class="flex flex-col md:flex-row gap-8 mb-8">
+<div class="md:w-1/3">
+<div class="bg-gray-50 rounded-xl p-6 text-center">
+<div class="w-32 h-32 bg-primary text-white rounded-full flex items-center justify-center mx-auto mb-4 text-4xl">
+<i class="fas fa-user"></i>
+</div>
+<h3 class="font-bold text-gray-800 text-lg">王志B</h3>
+<p class="text-gray-600 text-sm mb-2">系统管理员</p>
+<p class="text-gray-500 text-xs">上次登录: 2026-02-25 11:49</p>
+<button class="mt-4 text-primary hover:underline text-sm">更换头像</button>
+</div>
+</div>
+<div class="md:w-2/3">
+<h4 class="font-bold text-gray-700 mb-4">基本信息</h4>
+<div class="space-y-4">
+<div class="grid grid-cols-2 gap-4">
+<div>
+<label class="block text-sm font-medium text-gray-700 mb-1">姓名</label>
+<input class="w-full border border-gray-300 rounded px-3 py-2 text-sm" type="text" value="王志B"/>
+</div>
+<div>
+<label class="block text-sm font-medium text-gray-700 mb-1">职位</label>
+<input class="w-full border border-gray-300 rounded px-3 py-2 text-sm" type="text" value="高级系统架构师"/>
+</div>
+</div>
+<div>
+<label class="block text-sm font-medium text-gray-700 mb-1">邮箱</label>
+<input class="w-full border border-gray-300 rounded px-3 py-2 text-sm" type="email" value="wangzhib@zipc-system.com"/>
+</div>
+<div>
+<label class="block text-sm font-medium text-gray-700 mb-1">部门</label>
+<input class="w-full border border-gray-300 rounded px-3 py-2 text-sm" type="text" value="产品研发部"/>
+</div>
+<div>
+<label class="block text-sm font-medium text-gray-700 mb-1">个人简介</label>
+<textarea class="w-full border border-gray-300 rounded px-3 py-2 text-sm h-24">专注于ZIPC状态变迁模型研究与系统开发，具有8年需求工程与系统架构经验。</textarea>
+</div>
+</div>
+</div>
+</div>
+<!-- 安全设置 -->
+<div class="bg-gray-50 rounded-xl p-6 mb-8">
+<h4 class="font-bold text-gray-700 mb-4">安全设置</h4>
+<div class="space-y-4">
+<div class="flex justify-between items-center">
+<div>
+<p class="font-medium text-gray-800">密码</p>
+<p class="text-gray-500 text-sm">上次修改: 2026-01-15</p>
+</div>
+<button class="text-primary hover:underline text-sm">修改密码</button>
+</div>
+<div class="flex justify-between items-center">
+<div>
+<p class="font-medium text-gray-800">双重认证</p>
+<p class="text-gray-500 text-sm">增强账户安全性</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs text-gray-500">已启用</span>
+<div class="w-12 h-6 bg-primary rounded-full relative">
+<div class="w-5 h-5 bg-white rounded-full absolute top-0.5 right-0.5"></div>
+</div>
+</div>
+</div>
+<div class="flex justify-between items-center">
+<div>
+<p class="font-medium text-gray-800">登录设备</p>
+<p class="text-gray-500 text-sm">当前有2台设备在线</p>
+</div>
+<button class="text-primary hover:underline text-sm">管理设备</button>
+</div>
+</div>
+</div>
+<!-- 统计信息 -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+<div class="bg-white border border-gray-200 rounded-lg p-4 text-center">
+<p class="text-2xl font-bold text-primary mb-1">128</p>
+<p class="text-gray-600 text-sm">项目数量</p>
+</div>
+<div class="bg-white border border-gray-200 rounded-lg p-4 text-center">
+<p class="text-2xl font-bold text-success mb-1">2,458</p>
+<p class="text-gray-600 text-sm">矩阵生成次数</p>
+</div>
+<div class="bg-white border border-gray-200 rounded-lg p-4 text-center">
+<p class="text-2xl font-bold text-warning mb-1">87</p>
+<p class="text-gray-600 text-sm">知识条目</p>
+</div>
+<div class="bg-white border border-gray-200 rounded-lg p-4 text-center">
+<p class="text-2xl font-bold text-info mb-1">364</p>
+<p class="text-gray-600 text-sm">问答次数</p>
+</div>
+</div>
+</div>
+</div>
+<div class="p-6 border-t border-gray-100">
+<div class="flex justify-end gap-3">
+<button class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition">取消</button>
+<button class="px-4 py-2 text-sm bg-primary text-white hover:bg-blue-600 rounded-lg transition" onclick="showToast('个人信息已更新', 'success')">保存更改</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- MODULE 8: 系统管理 -->
+<section class="w-full h-full absolute inset-0 opacity-0 pointer-events-none transition-opacity duration-300 bg-bgLight" id="module-admin">
+<div class="h-full p-6">
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 h-full flex flex-col">
+<div class="p-6 border-b border-gray-100">
+<div class="flex justify-between items-center">
+<div>
+<h2 class="text-xl font-bold text-gray-800 mb-2">系统管理</h2>
+<p class="text-gray-600 text-sm">管理员专属功能，配置系统参数与用户权限</p>
+</div>
+<span class="bg-warning text-white text-xs px-3 py-1 rounded-full">管理员权限</span>
+</div>
+</div>
+<div class="flex-1 p-6 overflow-y-auto">
+<!-- 管理选项卡 -->
+<div class="flex border-b border-gray-200 mb-6">
+<button class="px-4 py-2 text-sm font-medium text-primary border-b-2 border-primary" onclick="switchAdminTab('users')">用户管理</button>
+<button class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700" onclick="switchAdminTab('roles')">角色权限</button>
+<button class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700" onclick="switchAdminTab('logs')">系统日志</button>
+<button class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700" onclick="switchAdminTab('settings')">系统设置</button>
+</div>
+<!-- 用户管理 -->
+<div class="admin-tab" id="admin-users">
+<div class="flex justify-between items-center mb-4">
+<h4 class="font-bold text-gray-700">用户列表</h4>
+<button class="bg-primary text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-600 transition flex items-center gap-2">
+<i class="fas fa-plus"></i> 添加用户
+                                        </button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-sm text-gray-500">
+<thead class="text-xs text-gray-700 uppercase bg-gray-50">
+<tr>
+<th class="px-6 py-3">用户</th>
+<th class="px-6 py-3">角色</th>
+<th class="px-6 py-3">部门</th>
+<th class="px-6 py-3">状态</th>
+<th class="px-6 py-3">最后登录</th>
+<th class="px-6 py-3">操作</th>
+</tr>
+</thead>
+<tbody>
+<tr class="bg-white border-b hover:bg-gray-50">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center">
+<i class="fas fa-user text-xs"></i>
+</div>
+<div>
+<p class="font-medium text-gray-900">王志B</p>
+<p class="text-xs text-gray-500">wangzhib@zipc-system.com</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-warning text-white text-xs px-2 py-1 rounded-full">管理员</span>
+</td>
+<td class="px-6 py-4">产品研发部</td>
+<td class="px-6 py-4">
+<span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">在线</span>
+</td>
+<td class="px-6 py-4">2026-02-25 11:49</td>
+<td class="px-6 py-4">
+<button class="text-primary hover:underline text-sm mr-3">编辑</button>
+<button class="text-error hover:underline text-sm">禁用</button>
+</td>
+</tr>
+<tr class="bg-white border-b hover:bg-gray-50">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 bg-success text-white rounded-full flex items-center justify-center">
+<i class="fas fa-user text-xs"></i>
+</div>
+<div>
+<p class="font-medium text-gray-900">李明</p>
+<p class="text-xs text-gray-500">liming@zipc-system.com</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">开发者</span>
+</td>
+<td class="px-6 py-4">技术开发部</td>
+<td class="px-6 py-4">
+<span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">在线</span>
+</td>
+<td class="px-6 py-4">2026-02-25 10:30</td>
+<td class="px-6 py-4">
+<button class="text-primary hover:underline text-sm mr-3">编辑</button>
+<button class="text-error hover:underline text-sm">禁用</button>
+</td>
+</tr>
+<tr class="bg-white border-b hover:bg-gray-50">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 bg-info text-white rounded-full flex items-center justify-center">
+<i class="fas fa-user text-xs"></i>
+</div>
+<div>
+<p class="font-medium text-gray-900">张伟</p>
+<p class="text-xs text-gray-500">zhangwei@zipc-system.com</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full">分析师</span>
+</td>
+<td class="px-6 py-4">业务分析部</td>
+<td class="px-6 py-4">
+<span class="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full">离线</span>
+</td>
+<td class="px-6 py-4">2026-02-24 16:45</td>
+<td class="px-6 py-4">
+<button class="text-primary hover:underline text-sm mr-3">编辑</button>
+<button class="text-error hover:underline text-sm">禁用</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- 角色权限 -->
+<div class="admin-tab hidden" id="admin-roles">
+<h4 class="font-bold text-gray-700 mb-4">角色权限配置</h4>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="bg-white border border-gray-200 rounded-xl p-5">
+<h5 class="font-bold text-gray-800 mb-3">管理员</h5>
+<ul class="space-y-2 text-sm text-gray-600 mb-4">
+<li class="flex items-center gap-2">
+<i class="fas fa-check text-success"></i>
+<span>完全系统访问权限</span>
+</li>
+<li class="flex items-center gap-2">
+<i class="fas fa-check text-success"></i>
+<span>用户管理与权限分配</span>
+</li>
+<li class="flex items-center gap-2">
+<i class="fas fa-check text-success"></i>
+<span>系统配置与日志查看</span>
+</li>
+</ul>
+<p class="text-xs text-gray-500">3个用户属于此角色</p>
+</div>
+<div class="bg-white border border-gray-200 rounded-xl p-5">
+<h5 class="font-bold text-gray-800 mb-3">开发者</h5>
+<ul class="space-y-2 text-sm text-gray-600 mb-4">
+<li class="flex items-center gap-2">
+<i class="fas fa-check text-success"></i>
+<span>项目创建与管理</span>
+</li>
+<li class="flex items-center gap-2">
+<i class="fas fa-check text-success"></i>
+<span>模型训练与部署</span>
+</li>
+<li class="flex items-center gap-2">
+<i class="fas fa-times text-gray-300"></i>
+<span>用户管理权限</span>
+</li>
+</ul>
+<p class="text-xs text-gray-500">8个用户属于此角色</p>
+</div>
+<div class="bg-white border border-gray-200 rounded-xl p-5">
+<h5 class="font-bold text-gray-800 mb-3">分析师</h5>
+<ul class="space-y-2 text-sm text-gray-600 mb-4">
+<li class="flex items-center gap-2">
+<i class="fas fa-check text-success"></i>
+<span>数据查看与分析</span>
+</li>
+<li class="flex items-center gap-2">
+<i class="fas fa-check text-success"></i>
+<span>知识库编辑</span>
+</li>
+<li class="flex items-center gap-2">
+<i class="fas fa-times text-gray-300"></i>
+<span>系统配置权限</span>
+</li>
+</ul>
+<p class="text-xs text-gray-500">12个用户属于此角色</p>
+</div>
+</div>
+</div>
+<!-- 系统设置 -->
+<div class="admin-tab hidden" id="admin-settings">
+<h4 class="font-bold text-gray-700 mb-4">系统参数配置</h4>
+<div class="space-y-6 max-w-2xl">
+<div class="bg-gray-50 rounded-xl p-5">
+<h5 class="font-bold text-gray-800 mb-3">ZIPC模型默认参数</h5>
+<div class="space-y-4">
+<div>
+<label class="block text-sm font-medium text-gray-700 mb-1">默认Temperature值</label>
+<input class="w-full border border-gray-300 rounded px-3 py-2 text-sm" max="1" min="0" step="0.1" type="number" value="0.2"/>
+<p class="text-xs text-gray-500 mt-1">控制模型生成时的随机性，0为完全确定，1为完全随机</p>
+</div>
+<div>
+<label class="block text-sm font-medium text-gray-700 mb-1">最大状态节点数</label>
+<input class="w-full border border-gray-300 rounded px-3 py-2 text-sm" type="number" value="50"/>
+<p class="text-xs text-gray-500 mt-1">限制单个状态机中的最大节点数量</p>
+</div>
+</div>
+</div>
+<div class="bg-gray-50 rounded-xl p-5">
+<h5 class="font-bold text-gray-800 mb-3">系统行为设置</h5>
+<div class="space-y-4">
+<div class="flex justify-between items-center">
+<div>
+<p class="font-medium text-gray-800">自动保存草稿</p>
+<p class="text-gray-500 text-sm">每隔5分钟自动保存工作内容</p>
+</div>
+<div class="w-12 h-6 bg-primary rounded-full relative">
+<div class="w-5 h-5 bg-white rounded-full absolute top-0.5 right-0.5"></div>
+</div>
+</div>
+<div class="flex justify-between items-center">
+<div>
+<p class="font-medium text-gray-800">操作日志记录</p>
+<p class="text-gray-500 text-sm">记录所有用户的关键操作</p>
+</div>
+<div class="w-12 h-6 bg-primary rounded-full relative">
+<div class="w-5 h-5 bg-white rounded-full absolute top-0.5 right-0.5"></div>
+</div>
+</div>
+<div class="flex justify-between items-center">
+<div>
+<p class="font-medium text-gray-800">邮件通知</p>
+<p class="text-gray-500 text-sm">发送系统通知和提醒邮件</p>
+</div>
+<div class="w-12 h-6 bg-gray-300 rounded-full relative">
+<div class="w-5 h-5 bg-white rounded-full absolute top-0.5 left-0.5"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="p-6 border-t border-gray-100">
+<div class="flex justify-end gap-3">
+<button class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition">重置</button>
+<button class="px-4 py-2 text-sm bg-primary text-white hover:bg-blue-600 rounded-lg transition" onclick="showToast('系统配置已保存', 'success')">保存配置</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+</div>
+<!-- Toast通知容器 -->
+<div id="toast-container"></div>
+<!-- 知识编辑模态框 -->
+<div class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4" id="knowledge-modal">
+<div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+<div class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+<h3 class="font-bold text-lg text-gray-800">编辑知识条目</h3>
+<button class="text-gray-400 hover:text-gray-600" onclick="closeKnowledgeModal()">
+<i class="fas fa-times text-xl"></i>
+</button>
+</div>
+<!-- 步骤指示器 -->
+<div class="px-8 pt-4 flex items-center justify-between text-xs text-gray-500">
+<div class="flex items-center text-primary font-bold">
+<span class="w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center mr-1">1</span> 基本信息
+                </div>
+<div class="h-px bg-gray-300 flex-1 mx-2"></div>
+<div class="flex items-center">
+<span class="w-5 h-5 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center mr-1">2</span> 内容编辑
+                </div>
+<div class="h-px bg-gray-300 flex-1 mx-2"></div>
+<div class="flex items-center">
+<span class="w-5 h-5 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center mr-1">3</span> 封面上传
+                </div>
+</div>
+<div class="p-6 overflow-y-auto flex-1 space-y-4">
+<div>
+<label class="block text-sm font-medium text-gray-700 mb-1">标题 <span class="text-red-500">*</span></label>
+<input class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-primary outline-none" type="text" value="状态机基础定义"/>
+</div>
+<div>
+<label class="block text-sm font-medium text-gray-700 mb-1">分类</label>
+<select class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-primary outline-none">
+<option>ZIPC模型规范 &gt; 状态定义</option>
+<option>需求工程</option>
+</select>
+</div>
+<div>
+<label class="block text-sm font-medium text-gray-700 mb-1">摘要</label>
+<textarea class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-primary outline-none h-20">本文档详细定义了ZIPC模型中的基础状态节点及其属性...</textarea>
+</div>
+<!-- 版本控制面板 -->
+<div class="bg-gray-50 p-3 rounded border border-gray-200">
+<div class="flex justify-between items-center mb-2">
+<span class="text-xs font-bold text-gray-600">版本历史</span>
+<button class="text-xs text-primary hover:underline">
+<i class="fas fa-history mr-1"></i>回放足迹
+                        </button>
+</div>
+<div class="space-y-2">
+<div class="flex items-center justify-between text-xs bg-white p-2 rounded border border-gray-100">
+<span class="text-gray-700">v1.2 (当前)</span>
+<span class="text-gray-400">王志B, 2分钟前</span>
+</div>
+<div class="flex items-center justify-between text-xs p-2 rounded opacity-60">
+<span class="text-gray-700">v1.1</span>
+<span class="text-gray-400">王志B, 昨天</span>
+</div>
+</div>
+</div>
+</div>
+<div class="p-4 border-t border-gray-200 flex justify-end gap-3 bg-gray-50">
+<button class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-200 rounded transition" onclick="closeKnowledgeModal()">取消</button>
+<button class="px-4 py-2 text-sm bg-primary text-white hover:bg-blue-600 rounded transition shadow" onclick="saveKnowledge()">保存更改</button>
+</div>
+</div>
+</div>
+<script>
+        // 全局状态与配置
+        const state = {
+            activeTab: 'zipc',
+            activeAdminTab: 'users',
+            zipc: {
+                temp: 0.2,
+                isGenerating: false,
+                data: null
+            },
+            chat: {
+                history: [],
+                isTyping: false
+            },
+            knowledge: {
+                view: 'graph'
+            }
+        };
+
+        const defaultZipcText = `初始节点
+→ 一阶段
+→ 二阶段
+→ 子节点1/启动触发
+→ 子节点1/停止触发
+→ 子节点1/切换至活动模式
+→ 一阶段
+→ 二阶段
+→ 子节点1/切换至活动模式
+→ 一阶段
+→ 二阶段
+→ 子节点1/切换至活动模式
+→ 一阶段
+→ 二阶段
+→ 子节点1/切换至活动模式
+→ 一阶段
+→ 二阶段
+→ 子节点1/切换至活动模式
+→ 一阶段
+→ 二阶段
+→ 子节点1/切换至活动模式
+→ 一阶段
+→ 二阶段
+→ 子节点1/切换至活动模式
+→ 一阶段
+→ 二阶段
+→ 子节点1/切换至活动模式
+→ 一阶段
+→ 二阶段
+→ 子节点1/切换至活动模式
+→ 一阶段
+→ 二阶段
+→ 子节点1/切换至活动模式`;
+
+        // 图表实例
+        let zipcChart;
+        let kgChart;
+
+        // 初始化函数
+        document.addEventListener('DOMContentLoaded', () => {
+            // 设置默认文本
+            document.getElementById('zipc-input').value = defaultZipcText;
+            
+            // 初始化图表实例
+            initZipcChart();
+            initKnowledgeGraph();
+
+            // 处理窗口大小调整
+            window.addEventListener('resize', () => {
+                if (zipcChart) zipcChart.resize();
+                if (kgChart) kgChart.resize();
+            });
+
+            // 聊天输入框回车键支持
+            document.getElementById('chat-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            // 显示初始模块
+            switchTab('zipc');
+        });
+
+        // 切换模块函数
+        function switchTab(tabId) {
+            state.activeTab = tabId;
+            
+            // 更新导航UI
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+                item.classList.remove('bg-blue-50', 'text-primary', 'border-l-4', 'border-primary');
+            });
+            
+            // 激活当前选中的导航项
+            const navItems = document.querySelectorAll('.nav-item');
+            for (let item of navItems) {
+                if (item.querySelector('span')?.textContent?.includes(tabId === 'zipc' ? 'ZIPC矩阵生成' : 
+                    tabId === 'qa' ? '需求智能问答' : 
+                    tabId === 'knowledge' ? '知识管理' : 
+                    tabId === 'upload' ? '文件上传' : 
+                    tabId === 'projects' ? '项目管理' : 
+                    tabId === 'models' ? '模型管理' : 
+                    tabId === 'profile' ? '个人中心' : 
+                    tabId === 'admin' ? '系统管理' : '')) {
+                    item.classList.add('active');
+                    item.classList.add('bg-blue-50', 'text-primary', 'border-l-4', 'border-primary');
+                    break;
+                }
+            }
+
+            // 切换模块显示
+            const modules = ['zipc', 'qa', 'knowledge', 'upload', 'projects', 'models', 'profile', 'admin'];
+            modules.forEach(id => {
+                const el = document.getElementById(`module-${id}`);
+                if (id === tabId) {
+                    el.classList.remove('opacity-0', 'pointer-events-none');
+                    el.classList.add('z-10');
+                    
+                    // 当模块可见时调整图表大小
+                    if (id === 'zipc' && zipcChart) {
+                        setTimeout(() => zipcChart.resize(), 50);
+                    }
+                    if (id === 'knowledge' && kgChart) {
+                        setTimeout(() => kgChart.resize(), 50);
+                    }
+                } else {
+                    el.classList.add('opacity-0', 'pointer-events-none');
+                    el.classList.remove('z-10');
+                }
+            });
+
+            // 移动端切换模块后自动关闭侧边栏
+            if (window.innerWidth < 768) {
+                toggleSidebar();
+            }
+        }
+
+        // 切换侧边栏（移动端）
+        function toggleSidebar(show) {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            
+            if (show === undefined) {
+                show = sidebar.classList.contains('-translate-x-full');
+            }
+            
+            if (show) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.style.display = 'block';
+                setTimeout(() => overlay.style.opacity = '1', 10);
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.style.display = 'none', 300);
+            }
+        }
+
+        // --- ZIPC模块逻辑 ---
+        function updateTempValue(val) {
+            state.zipc.temp = parseFloat(val);
+            if (state.zipc.temp < 0) state.zipc.temp = 0;
+            if (state.zipc.temp > 1) state.zipc.temp = 1;
+            
+            document.getElementById('temp-slider').value = state.zipc.temp;
+            document.getElementById('temp-input').value = state.zipc.temp;
+        }
+
+        function handleFileUpload(input) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                showToast(`已加载文件: ${file.name}`, 'success');
+                
+                // 模拟读取文件
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    document.getElementById('zipc-input').value = e.target.result;
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        function handleBulkUpload(input) {
+            if (input.files && input.files.length > 0) {
+                const count = input.files.length;
+                showToast(`已选择 ${count} 个文件，开始上传...`, 'info');
+                
+                // 模拟上传过程
+                setTimeout(() => {
+                    showToast(`${count} 个文件上传完成`, 'success');
+                }, 2000);
+            }
+        }
+
+        function runGeneration() {
+            if (state.zipc.isGenerating) return;
+            
+            const text = document.getElementById('zipc-input').value;
+            if (!text.trim()) {
+                showToast('请输入需求文档或上传文件', 'error');
+                return;
+            }
+
+            state.zipc.isGenerating = true;
+            const btn = document.getElementById('btn-run');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 处理中...';
+            btn.disabled = true;
+
+            document.getElementById('zipc-loading').classList.remove('hidden');
+            document.getElementById('zipc-loading').classList.add('flex');
+
+            // 模拟处理延迟
+            setTimeout(() => {
+                processZipcData(text);
+                
+                state.zipc.isGenerating = false;
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                document.getElementById('zipc-loading').classList.add('hidden');
+                document.getElementById('zipc-loading').classList.remove('flex');
+                
+                showToast('矩阵生成成功', 'success');
+            }, 1500);
+        }
+
+        function processZipcData(text) {
+            // 解析特定格式 "Node -> Node"
+            const lines = text.split('\n');
+            const nodes = new Map();
+            const links = [];
+            const pathSequence = [];
+            
+            let nodeCounter = 0;
+
+            lines.forEach(line => {
+                const parts = line.split('→').map(s => s.trim()).filter(s => s);
+                if (parts.length < 2) {
+                    if (parts.length === 1 && parts[0]) {
+                        // 初始节点
+                        if (!nodes.has(parts[0])) {
+                            nodes.set(parts[0], { name: parts[0], id: nodeCounter++ });
+                        }
+                        pathSequence.push(parts[0]);
+                    }
+                    return;
+                }
+
+                parts.forEach((part, index) => {
+                    if (!nodes.has(part)) {
+                        nodes.set(part, { name: part, id: nodeCounter++ });
+                    }
+                    if (index > 0) {
+                        const source = parts[index - 1];
+                        const target = part;
+                        
+                        // 检查链接是否已存在
+                        const existingLink = links.find(l => l.source === source && l.target === target);
+                        if (existingLink) {
+                            existingLink.value += 1;
+                        } else {
+                            links.push({ source, target, value: 1 });
+                        }
+                    }
+                    pathSequence.push(part);
+                });
+            });
+
+            state.zipc.data = { nodes: Array.from(nodes.values()), links, pathSequence };
+            renderSankeyChart(state.zipc.data);
+            renderStatePath(state.zipc.data.pathSequence);
+        }
+
+        function initZipcChart() {
+            const dom = document.getElementById('sankey-chart');
+            zipcChart = echarts.init(dom);
+            // 初始显示空图表
+            zipcChart.setOption({
+                title: { 
+                    text: '等待数据...', 
+                    left: 'center', 
+                    top: 'center', 
+                    textStyle: { color: '#999' } 
+                }
+            });
+        }
+
+        function renderSankeyChart(data) {
+            const option = {
+                tooltip: {
+                    trigger: 'item',
+                    triggerOn: 'mousemove'
+                },
+                series: [
+                    {
+                        type: 'sankey',
+                        layout: 'none',
+                        emphasis: {
+                            focus: 'adjacency'
+                        },
+                        data: data.nodes.map(n => ({ name: n.name })),
+                        links: data.links,
+                        top: '10%',
+                        bottom: '10%',
+                        left: '10%',
+                        right: '10%',
+                        nodeWidth: 20,
+                        nodeGap: 8,
+                        lineStyle: {
+                            color: 'gradient',
+                            curveness: 0.5
+                        },
+                        label: {
+                            fontSize: 12
+                        },
+                        levels: [{
+                            depth: 0,
+                            itemStyle: { color: '#3B82F6' },
+                            lineStyle: { color: 'source', opacity: 0.6 }
+                        }, {
+                            depth: 1,
+                            itemStyle: { color: '#6B7280' }
+                        }, {
+                            depth: 2,
+                            itemStyle: { color: '#10B981' }
+                        }]
+                    }
+                ]
+            };
+            zipcChart.setOption(option, true);
+        }
+
+        function renderStatePath(sequence) {
+            const container = document.getElementById('state-path-container');
+            container.innerHTML = '';
+            
+            sequence.forEach((node, index) => {
+                const span = document.createElement('span');
+                span.className = 'px-2 py-1 bg-white border border-gray-200 rounded text-xs text-gray-600 shadow-sm';
+                span.textContent = node;
+                
+                // 添加箭头
+                if (index < sequence.length - 1) {
+                    const arrow = document.createElement('i');
+                    arrow.className = 'fas fa-chevron-right text-gray-300 text-xs mx-1';
+                    container.appendChild(span);
+                    container.appendChild(arrow);
+                } else {
+                    // 最后一个节点高亮
+                    span.classList.add('bg-blue-50', 'text-primary', 'border-primary');
+                    container.appendChild(span);
+                    
+                    // 更新状态文本
+                    document.getElementById('current-state-text').textContent = `当前状态：${node}`;
+                }
+            });
+        }
+
+        function resetZipcView() {
+            if (zipcChart) {
+                zipcChart.dispatchAction({
+                    type: 'restore'
+                });
+                showToast('视图已重置', 'info');
+            }
+        }
+
+        function downloadChartImage() {
+            if (zipcChart) {
+                const imgUrl = zipcChart.getDataURL({
+                    type: 'png',
+                    pixelRatio: 2,
+                    backgroundColor: '#fff'
+                });
+                
+                const a = document.createElement('a');
+                a.href = imgUrl;
+                a.download = 'zipc-matrix.png';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                showToast('图表已下载为PNG图片', 'success');
+            }
+        }
+
+        function exportData(type) {
+            if (!state.zipc.data) {
+                showToast('暂无数据可导出，请先生成矩阵', 'warning');
+                return;
+            }
+            
+            let content, filename, mime;
+            if (type === 'json') {
+                content = JSON.stringify(state.zipc.data, null, 2);
+                filename = 'zipc_matrix.json';
+                mime = 'application/json';
+            } else {
+                content = document.getElementById('zipc-input').value;
+                filename = 'requirements.txt';
+                mime = 'text/plain';
+            }
+
+            const blob = new Blob([content], { type: mime });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showToast(`${type.toUpperCase()} 已成功保存`, 'success');
+        }
+
+        // --- 聊天模块逻辑 ---
+        function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            // 添加用户消息
+            addMessage(text, 'user');
+            input.value = '';
+
+            // 模拟AI思考
+            state.chat.isTyping = true;
+            const thinkingId = addThinkingIndicator();
+
+            // 模拟网络延迟和流式响应
+            setTimeout(() => {
+                removeMessage(thinkingId);
+                streamAIResponse(text);
+            }, 1000);
+        }
+
+        function addMessage(text, type) {
+            const container = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            div.className = `flex items-start gap-4 fade-in ${type === 'user' ? 'flex-row-reverse' : ''}`;
+            
+            const avatar = type === 'user' 
+                ? '<div class="w-10 h-10 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center flex-shrink-0"><i class="fas fa-user"></i></div>'
+                : '<div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-robot"></i></div>';
+            
+            const bubbleClass = type === 'user'
+                ? 'bg-primary text-white rounded-tr-none'
+                : 'bg-white text-gray-700 rounded-tl-none border border-gray-100 shadow-sm';
+
+            div.innerHTML = `
+                ${avatar}
+                <div class="${bubbleClass} p-4 rounded-2xl max-w-[80%] text-sm leading-relaxed">
+                    ${type === 'user' ? text : '<span class="typing-cursor"></span>'}
+                </div>
+            `;
+            
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+            return div.querySelector('.typing-cursor') || div; // 返回游标元素用于流式输出或用户消息的div
+        }
+
+        function addThinkingIndicator() {
+            const container = document.getElementById('chat-messages');
+            const id = 'thinking-' + Date.now();
+            const div = document.createElement('div');
+            div.id = id;
+            div.className = 'flex items-start gap-4 fade-in';
+            div.innerHTML = `
+                <div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-robot"></i></div>
+                <div class="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 text-sm text-gray-500">
+                    <i class="fas fa-circle-notch fa-spin mr-2"></i>正在思考中…
+                </div>
+            `;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+            return id;
+        }
+
+        function removeMessage(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        function streamAIResponse(userQuery) {
+            const responseText = `根据您关于"${userQuery}"的问题，基于ZIPC状态变迁模型的分析如下：\n\n首先，该状态转移必须满足前置条件校验。在Temperature参数设置为${state.zipc.temp}的情况下，系统的推理路径倾向于选择确定性最高的分支。\n\n具体来说，如果涉及到"非法状态转移"，系统会自动拦截并提示错误。例如，不允许从'等待'直接跳至'完成'。\n\n建议您检查需求文档中的第3.2节定义。\n\n[引用:1]`;
+            
+            // 创建消息容器
+            const container = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            div.className = `flex items-start gap-4 fade-in`;
+            div.innerHTML = `
+                <div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-robot"></i></div>
+                <div class="bg-white text-gray-700 rounded-tl-none border border-gray-100 shadow-sm p-4 rounded-2xl max-w-[80%] text-sm leading-relaxed">
+                    <span id="streaming-text" class="typing-cursor"></span>
+                </div>
+            `;
+            container.appendChild(div);
+
+            const textSpan = div.querySelector('#streaming-text');
+            let i = 0;
+            
+            const interval = setInterval(() => {
+                textSpan.textContent += responseText.charAt(i);
+                container.scrollTop = container.scrollHeight;
+                i++;
+                if (i >= responseText.length) {
+                    clearInterval(interval);
+                    textSpan.classList.remove('typing-cursor');
+                    state.chat.isTyping = false;
+                }
+            }, 30); // 打字速度
+        }
+
+        function loadChatHistory(id) {
+            // 模拟加载历史聊天记录
+            showToast('正在加载历史对话...', 'info');
+        }
+
+        function startNewChat() {
+            document.getElementById('chat-messages').innerHTML = `
+                <div class="flex items-start gap-4">
+                    <div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 max-w-[80%]">
+                        <p class="text-gray-700 text-sm leading-relaxed">您好！我是您的智能需求助手。您可以询问关于ZIPC状态变迁矩阵、需求文档解析或知识库管理的任何问题。</p>
+                    </div>
+                </div>
+            `;
+            showToast('新对话已开始', 'success');
+        }
+
+        // --- 知识管理模块逻辑 ---
+        function initKnowledgeGraph() {
+            const dom = document.getElementById('knowledge-graph');
+            kgChart = echarts.init(dom);
+            
+            const option = {
+                tooltip: {},
+                animationDurationUpdate: 1500,
+                animationEasingUpdate: 'quinticInOut',
+                series: [
+                    {
+                        type: 'graph',
+                        layout: 'force',
+                        force: {
+                            repulsion: 200,
+                            edgeLength: 100
+                        },
+                        data: [
+                            { name: 'ZIPC模型', symbolSize: 50, itemStyle: { color: '#3B82F6' } },
+                            { name: '状态定义', symbolSize: 30, itemStyle: { color: '#10B981' } },
+                            { name: '转移规则', symbolSize: 30, itemStyle: { color: '#10B981' } },
+                            { name: '需求工程', symbolSize: 40, itemStyle: { color: '#F59E0B' } },
+                            { name: '验证', symbolSize: 20 },
+                            { name: '推理', symbolSize: 20 },
+                            { name: '系统架构', symbolSize: 40, itemStyle: { color: '#6B7280' } }
+                        ],
+                        links: [
+                            { source: 'ZIPC模型', target: '状态定义' },
+                            { source: 'ZIPC模型', target: '转移规则' },
+                            { source: '状态定义', target: '验证' },
+                            { source: '转移规则', target: '推理' },
+                            { source: '需求工程', target: 'ZIPC模型' },
+                            { source: '系统架构', target: '需求工程' }
+                        ],
+                        roam: true,
+                        label: { show: true, position: 'right', formatter: '{b}' },
+                        lineStyle: { color: 'source', curveness: 0.3 }
+                    }
+                ]
+            };
+            kgChart.setOption(option);
+        }
+
+        function toggleKnowledgeView(view) {
+            state.knowledge.view = view;
+            const graphBtn = document.getElementById('view-graph');
+            const cardBtn = document.getElementById('view-card');
+            const graphDiv = document.getElementById('knowledge-graph-view');
+            const cardDiv = document.getElementById('knowledge-card-view');
+
+            if (view === 'graph') {
+                graphBtn.classList.add('text-primary', 'font-bold', 'border-b-2', 'border-primary');
+                graphBtn.classList.remove('text-gray-500');
+                cardBtn.classList.remove('text-primary', 'font-bold', 'border-b-2', 'border-primary');
+                cardBtn.classList.add('text-gray-500');
+                
+                graphDiv.classList.remove('hidden');
+                cardDiv.classList.add('hidden');
+                setTimeout(() => kgChart.resize(), 50);
+            } else {
+                cardBtn.classList.add('text-primary', 'font-bold', 'border-b-2', 'border-primary');
+                cardBtn.classList.remove('text-gray-500');
+                graphBtn.classList.remove('text-primary', 'font-bold', 'border-b-2', 'border-primary');
+                graphBtn.classList.add('text-gray-500');
+
+                cardDiv.classList.remove('hidden');
+                graphDiv.classList.add('hidden');
+            }
+        }
+
+        function zoomGraph(factor) {
+            if (kgChart) {
+                const option = kgChart.getOption();
+                kgChart.dispatchAction({
+                    type: 'dataZoom',
+                    batch: [{ start: 0, end: 100 * factor }]
+                });
+            }
+        }
+
+        function selectKnowledgeItem(itemId) {
+            showToast(`已选择知识项: ${itemId}`, 'info');
+        }
+
+        function openKnowledgeModal(isEdit = false) {
+            const modal = document.getElementById('knowledge-modal');
+            modal.classList.remove('hidden');
+            if (!isEdit) {
+                // 为新条目重置表单
+                modal.querySelector('input').value = '';
+                modal.querySelector('textarea').value = '';
+            }
+        }
+
+        function closeKnowledgeModal() {
+            document.getElementById('knowledge-modal').classList.add('hidden');
+        }
+
+        function saveKnowledge() {
+            // 验证
+            const title = document.querySelector('#knowledge-modal input').value;
+            if (!title.trim()) {
+                showToast('标题为必填项', 'error');
+                return;
+            }
+            closeKnowledgeModal();
+            showToast('知识条目保存成功', 'success');
+        }
+
+        // --- 系统管理模块逻辑 ---
+        function switchAdminTab(tabId) {
+            state.activeAdminTab = tabId;
+            
+            // 更新选项卡按钮
+            document.querySelectorAll('#module-admin .flex button').forEach(btn => {
+                btn.classList.remove('text-primary', 'border-b-2', 'border-primary');
+                btn.classList.add('text-gray-500', 'hover:text-gray-700');
+            });
+            
+            const activeBtn = document.querySelector(`#module-admin .flex button:nth-child(${tabId === 'users' ? 1 : tabId === 'roles' ? 2 : tabId === 'logs' ? 3 : 4})`);
+            if (activeBtn) {
+                activeBtn.classList.add('text-primary', 'border-b-2', 'border-primary');
+                activeBtn.classList.remove('text-gray-500', 'hover:text-gray-700');
+            }
+            
+            // 切换选项卡内容
+            document.querySelectorAll('.admin-tab').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+            document.getElementById(`admin-${tabId}`).classList.remove('hidden');
+        }
+
+        // --- 实用函数 ---
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            
+            let icon, color;
+            switch(type) {
+                case 'success':
+                    icon = '<i class="fas fa-check-circle text-success text-xl"></i>';
+                    toast.style.borderLeftColor = '#10B981';
+                    break;
+                case 'error':
+                    icon = '<i class="fas fa-exclamation-circle text-error text-xl"></i>';
+                    toast.style.borderLeftColor = '#EF4444';
+                    break;
+                case 'warning':
+                    icon = '<i class="fas fa-exclamation-triangle text-warning text-xl"></i>';
+                    toast.style.borderLeftColor = '#F59E0B';
+                    break;
+                case 'info':
+                    icon = '<i class="fas fa-info-circle text-info text-xl"></i>';
+                    toast.style.borderLeftColor = '#06B6D4';
+                    break;
+            }
+
+            toast.innerHTML = `
+                <div class="flex items-center gap-3">
+                    ${icon}
+                    <span class="text-sm font-medium text-gray-700">${message}</span>
+                </div>
+                <button onclick="this.parentElement.remove()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+
+            container.appendChild(toast);
+
+            // 自动移除
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                toast.style.transition = 'all 0.3s ease-out';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
