@@ -8,7 +8,6 @@
 <!-- 第三方库导入 -->
 <script src="https://image.uc.cn/s/uae/g/3n/mos-production/fontawesome-free-7.1.0-web/js/all.min.js"></script>
 <script src="https://image.uc.cn/s/uae/g/3n/mos-production/0915/3.4.17.js"></script>
-<script src="https://image.uc.cn/s/uae/g/3n/mos-production/0915/echarts.min.js"></script>
 <style>
         /* 自定义滚动条 */
         ::-webkit-scrollbar {
@@ -1486,7 +1485,7 @@
                         setTimeout(() => zipcChart.resize(), 50);
                     }
                     if (id === 'knowledge' && kgChart) {
-                        setTimeout(() => kgChart.resize(), 50);
+                        if (kgChart && typeof kgChart.resize === 'function') setTimeout(() => kgChart.resize(), 50);
                     }
                 } else {
                     el.classList.add('opacity-0', 'pointer-events-none');
@@ -1762,66 +1761,37 @@
 
         function initZipcChart() {
             const dom = document.getElementById('sankey-chart');
-            if (!dom || typeof echarts === 'undefined') {
-                zipcChart = null;
-                return;
-            }
-            zipcChart = echarts.init(dom);
-            // 初始显示空图表
-            zipcChart.setOption({
-                title: { 
-                    text: '等待数据...', 
-                    left: 'center', 
-                    top: 'center', 
-                    textStyle: { color: '#999' } 
-                }
-            });
+            if (!dom) return;
+            dom.innerHTML = '<div class="h-full flex items-center justify-center text-sm text-gray-400">状态矩阵预览（HTML）将在生成后显示</div>';
+            zipcChart = null;
         }
 
         function renderSankeyChart(data) {
-            if (!zipcChart) return;
-            const option = {
-                tooltip: {
-                    trigger: 'item',
-                    triggerOn: 'mousemove'
-                },
-                series: [
-                    {
-                        type: 'sankey',
-                        layout: 'none',
-                        emphasis: {
-                            focus: 'adjacency'
-                        },
-                        data: data.nodes.map(n => ({ name: n.name })),
-                        links: data.links,
-                        top: '10%',
-                        bottom: '10%',
-                        left: '10%',
-                        right: '10%',
-                        nodeWidth: 20,
-                        nodeGap: 8,
-                        lineStyle: {
-                            color: 'gradient',
-                            curveness: 0.5
-                        },
-                        label: {
-                            fontSize: 12
-                        },
-                        levels: [{
-                            depth: 0,
-                            itemStyle: { color: '#3B82F6' },
-                            lineStyle: { color: 'source', opacity: 0.6 }
-                        }, {
-                            depth: 1,
-                            itemStyle: { color: '#6B7280' }
-                        }, {
-                            depth: 2,
-                            itemStyle: { color: '#10B981' }
-                        }]
-                    }
-                ]
-            };
-            zipcChart.setOption(option, true);
+            const dom = document.getElementById('sankey-chart');
+            if (!dom) return;
+            const links = (data.links || []).map(link => `
+                <tr>
+                    <td class="px-3 py-2 border-b text-gray-700">${escapeHtml(link.source)}</td>
+                    <td class="px-3 py-2 border-b text-gray-500">→</td>
+                    <td class="px-3 py-2 border-b text-gray-700">${escapeHtml(link.target)}</td>
+                    <td class="px-3 py-2 border-b text-gray-500">${escapeHtml(link.event || '状态转移')}</td>
+                </tr>
+            `).join('');
+            dom.innerHTML = `
+                <div class="h-full overflow-auto border border-gray-200 rounded-lg">
+                    <table class="min-w-full text-xs">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-3 py-2 text-left border-b">起始状态</th>
+                                <th class="px-3 py-2 text-left border-b"></th>
+                                <th class="px-3 py-2 text-left border-b">目标状态</th>
+                                <th class="px-3 py-2 text-left border-b">触发事件</th>
+                            </tr>
+                        </thead>
+                        <tbody>${links || '<tr><td class="px-3 py-3 text-gray-400" colspan="4">暂无状态转移数据</td></tr>'}</tbody>
+                    </table>
+                </div>
+            `;
         }
 
         function renderStatePath(sequence) {
@@ -1851,31 +1821,32 @@
         }
 
         function resetZipcView() {
-            if (zipcChart) {
-                zipcChart.dispatchAction({
-                    type: 'restore'
-                });
-                showToast('视图已重置', 'info');
+            const dom = document.getElementById('sankey-chart');
+            if (!dom) return;
+            if (!state.zipc.data?.links?.length) {
+                showToast('暂无矩阵可重置', 'info');
+                return;
             }
+            renderSankeyChart(state.zipc.data);
+            showToast('已重置为默认状态矩阵预览', 'info');
         }
 
         function downloadChartImage() {
-            if (zipcChart) {
-                const imgUrl = zipcChart.getDataURL({
-                    type: 'png',
-                    pixelRatio: 2,
-                    backgroundColor: '#fff'
-                });
-                
-                const a = document.createElement('a');
-                a.href = imgUrl;
-                a.download = 'zipc-matrix.png';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                
-                showToast('图表已下载为PNG图片', 'success');
+            if (!state.zipc.data) {
+                showToast('暂无可下载数据，请先生成SEAT模型', 'warning');
+                return;
             }
+            const content = JSON.stringify(state.zipc.data, null, 2);
+            const blob = new Blob([content], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'zipc-transition-preview.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('已下载状态矩阵预览数据(JSON)', 'success');
         }
 
         function exportData(type) {
@@ -2211,48 +2182,18 @@
         // --- 知识管理模块逻辑 ---
         function initKnowledgeGraph() {
             const dom = document.getElementById('knowledge-graph');
-            if (!dom || typeof echarts === 'undefined') {
-                kgChart = null;
-                return;
-            }
-            kgChart = echarts.init(dom);
-            
-            const option = {
-                tooltip: {},
-                animationDurationUpdate: 1500,
-                animationEasingUpdate: 'quinticInOut',
-                series: [
-                    {
-                        type: 'graph',
-                        layout: 'force',
-                        force: {
-                            repulsion: 200,
-                            edgeLength: 100
-                        },
-                        data: [
-                            { name: 'ZIPC模型', symbolSize: 50, itemStyle: { color: '#3B82F6' } },
-                            { name: '状态定义', symbolSize: 30, itemStyle: { color: '#10B981' } },
-                            { name: '转移规则', symbolSize: 30, itemStyle: { color: '#10B981' } },
-                            { name: '需求工程', symbolSize: 40, itemStyle: { color: '#F59E0B' } },
-                            { name: '验证', symbolSize: 20 },
-                            { name: '推理', symbolSize: 20 },
-                            { name: '系统架构', symbolSize: 40, itemStyle: { color: '#6B7280' } }
-                        ],
-                        links: [
-                            { source: 'ZIPC模型', target: '状态定义' },
-                            { source: 'ZIPC模型', target: '转移规则' },
-                            { source: '状态定义', target: '验证' },
-                            { source: '转移规则', target: '推理' },
-                            { source: '需求工程', target: 'ZIPC模型' },
-                            { source: '系统架构', target: '需求工程' }
-                        ],
-                        roam: true,
-                        label: { show: true, position: 'right', formatter: '{b}' },
-                        lineStyle: { color: 'source', curveness: 0.3 }
-                    }
-                ]
-            };
-            kgChart.setOption(option);
+            if (!dom) return;
+            dom.innerHTML = `
+                <div class="h-full p-4 overflow-auto">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                        <div class="bg-white border border-gray-200 rounded-lg p-3"><div class="font-semibold text-primary mb-1">ZIPC模型</div><div class="text-gray-500">核心节点：状态定义、转移规则、验证与推理</div></div>
+                        <div class="bg-white border border-gray-200 rounded-lg p-3"><div class="font-semibold text-green-600 mb-1">状态定义</div><div class="text-gray-500">关联：验证</div></div>
+                        <div class="bg-white border border-gray-200 rounded-lg p-3"><div class="font-semibold text-amber-600 mb-1">需求工程</div><div class="text-gray-500">关联：ZIPC模型</div></div>
+                        <div class="bg-white border border-gray-200 rounded-lg p-3"><div class="font-semibold text-gray-700 mb-1">系统架构</div><div class="text-gray-500">关联：需求工程</div></div>
+                    </div>
+                </div>
+            `;
+            kgChart = null;
         }
 
         function toggleKnowledgeView(view) {
@@ -2270,7 +2211,7 @@
                 
                 graphDiv.classList.remove('hidden');
                 cardDiv.classList.add('hidden');
-                setTimeout(() => kgChart.resize(), 50);
+                if (kgChart && typeof kgChart.resize === 'function') setTimeout(() => kgChart.resize(), 50);
             } else {
                 cardBtn.classList.add('text-primary', 'font-bold', 'border-b-2', 'border-primary');
                 cardBtn.classList.remove('text-gray-500');
@@ -2283,13 +2224,7 @@
         }
 
         function zoomGraph(factor) {
-            if (kgChart) {
-                const option = kgChart.getOption();
-                kgChart.dispatchAction({
-                    type: 'dataZoom',
-                    batch: [{ start: 0, end: 100 * factor }]
-                });
-            }
+            showToast('当前为HTML静态图谱演示，缩放功能已禁用', 'info');
         }
 
         function selectKnowledgeItem(itemId) {
