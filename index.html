@@ -1414,11 +1414,11 @@
             // 设置默认文本
             document.getElementById('zipc-input').value = defaultZipcText;
             
-            // 初始化图表实例
-            initZipcChart();
-            initKnowledgeGraph();
-            initQAModule();
-            renderVersionHistory();
+            // 初始化模块（容错）
+            safeInit(initZipcChart, 'ZIPC矩阵预览初始化失败');
+            safeInit(initKnowledgeGraph, '知识图谱初始化失败');
+            safeInit(initQAModule, '问答模块初始化失败');
+            safeInit(renderVersionHistory, '版本历史初始化失败');
 
             // 处理窗口大小调整
             window.addEventListener('resize', () => {
@@ -1443,6 +1443,15 @@
             switchTab('home');
             if (window.innerWidth < 768) {
                 toggleSidebar(false);
+            }
+        }
+
+        function safeInit(fn, failMessage) {
+            try {
+                if (typeof fn === 'function') fn();
+            } catch (e) {
+                console.error(e);
+                showToast(failMessage, 'warning');
             }
         }
 
@@ -1557,28 +1566,60 @@
 
         function runRequirementAnalysis() {
             if (state.zipc.isGenerating) return;
-            const text = document.getElementById('zipc-input').value;
-            if (!text.trim()) { showToast('请输入需求文档或上传文件', 'error'); return; }
+            const inputEl = document.getElementById('zipc-input');
+            const text = inputEl ? inputEl.value : '';
+            if (!text.trim()) {
+                showToast('请输入需求文档或上传文件', 'error');
+                return;
+            }
+
             state.zipc.isGenerating = true;
             const btn = document.getElementById('btn-run');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 需求分析中...';
-            btn.disabled = true;
-            document.getElementById('zipc-loading').classList.remove('hidden');
-            document.getElementById('zipc-loading').classList.add('flex');
-            updateTermProgress(20, '正在预处理文档...');
-            setTimeout(() => updateTermProgress(55, '正在进行术语识别...'), 400);
-            setTimeout(() => {
-                renderTermList();
-                updateTermProgress(100, '术语识别完成');
-                state.zipc.analysisDone = true;
+            const originalText = btn ? btn.innerHTML : '';
+            try {
+                if (btn) {
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 需求分析中...';
+                    btn.disabled = true;
+                }
+                const loading = document.getElementById('zipc-loading');
+                if (loading) {
+                    loading.classList.remove('hidden');
+                    loading.classList.add('flex');
+                }
+
+                updateTermProgress(20, '正在预处理文档...');
+                setTimeout(() => updateTermProgress(55, '正在进行术语识别...'), 350);
+                setTimeout(() => {
+                    try {
+                        renderTermList();
+                        updateTermProgress(100, '术语识别完成');
+                        state.zipc.analysisDone = true;
+                        showToast('需求分析完成，请继续生成SEAT模型', 'success');
+                    } catch (e) {
+                        console.error(e);
+                        showToast('需求分析过程出现异常', 'error');
+                    } finally {
+                        state.zipc.isGenerating = false;
+                        if (btn) {
+                            btn.innerHTML = originalText;
+                            btn.disabled = false;
+                        }
+                        const loading2 = document.getElementById('zipc-loading');
+                        if (loading2) {
+                            loading2.classList.add('hidden');
+                            loading2.classList.remove('flex');
+                        }
+                    }
+                }, 1100);
+            } catch (e) {
+                console.error(e);
                 state.zipc.isGenerating = false;
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-                document.getElementById('zipc-loading').classList.add('hidden');
-                document.getElementById('zipc-loading').classList.remove('flex');
-                showToast('需求分析完成，请继续生成SEAT模型', 'success');
-            }, 1300);
+                if (btn) {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+                showToast('运行需求分析失败', 'error');
+            }
         }
 
         function updateTermProgress(percent, text) {
@@ -1652,12 +1693,18 @@
         }
 
         function renderSeatTable() {
+            const container = document.getElementById('seat-table-container');
+            if (!container) return;
+            if (!zipcSeatDemo || typeof zipcSeatDemo !== 'object') {
+                container.innerHTML = '<div class="p-4 text-sm text-red-500">演示数据缺失，无法渲染SEAT表</div>';
+                return;
+            }
             const tableOrder = ['主表0', '子表0.1'];
             const html = tableOrder
                 .filter(key => zipcSeatDemo[key])
                 .map(key => renderSingleSeatTable(key, zipcSeatDemo[key]))
                 .join('');
-            document.getElementById('seat-table-container').innerHTML = html;
+            container.innerHTML = html || '<div class="p-4 text-sm text-red-500">未找到可渲染的SEAT表数据</div>';
         }
 
         function renderSingleSeatTable(tableKey, table) {
