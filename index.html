@@ -312,8 +312,8 @@
 </div>
 <!-- 操作按钮 -->
 <div class="space-y-3">
-<button class="w-full bg-primary hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg shadow transition flex justify-center items-center gap-2" id="btn-run" onclick="runGeneration()">
-<i class="fas fa-play"></i> 运行生成（校验/推理/查询）
+<button class="w-full bg-primary hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg shadow transition flex justify-center items-center gap-2" id="btn-run" onclick="runRequirementAnalysis()">
+<i class="fas fa-magnifying-glass-chart"></i> 运行需求分析
                                     </button>
 <div class="grid grid-cols-2 gap-3">
 <button class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-2 px-4 rounded-lg transition text-sm" onclick="exportData('json')">
@@ -323,6 +323,29 @@
 <i class="fas fa-file-archive mr-1"></i> 导出 ZIP/TXT
                                         </button>
 </div>
+<div class="grid grid-cols-2 gap-3">
+<button class="bg-indigo-600 text-white hover:bg-indigo-700 font-medium py-2 px-4 rounded-lg transition text-sm" onclick="generateSeatModel()">
+<i class="fas fa-table mr-1"></i> 生成SEAT模型
+                                        </button>
+<button class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-2 px-4 rounded-lg transition text-sm" onclick="importFromHistory()">
+<i class="fas fa-clock-rotate-left mr-1"></i> 历史项目导入
+                                        </button>
+</div>
+<div class="bg-blue-50 border border-blue-100 rounded-lg p-3">
+<div class="flex items-center justify-between mb-2">
+<span class="text-sm font-semibold text-blue-800">术语识别进度</span>
+<span class="text-xs text-blue-600" id="term-progress-text">未开始</span>
+</div>
+<div class="w-full h-2 bg-blue-100 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-0 transition-all duration-500" id="term-progress-bar"></div>
+</div>
+<div class="mt-3 max-h-32 overflow-y-auto text-xs text-gray-600 space-y-1" id="term-list">
+<span class="text-gray-400">点击“运行需求分析”后显示术语列表</span>
+</div>
+</div>
+<div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
+<div class="text-sm font-semibold text-gray-700 mb-2">版本历史（演示）</div>
+<div class="space-y-2 text-xs" id="zipc-version-list"></div>
 </div>
 <!-- 元信息 -->
 <div class="pt-4 border-t border-gray-100">
@@ -355,7 +378,16 @@
 <span class="text-primary font-medium">正在生成状态变迁矩阵...</span>
 </div>
 <!-- Sankey图容器 -->
-<div class="w-full h-full bg-white rounded-xl shadow-sm border border-gray-200" id="sankey-chart"></div>
+<div class="w-full h-[58%] bg-white rounded-xl shadow-sm border border-gray-200" id="sankey-chart"></div>
+<div class="mt-3 h-[42%] bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+<div class="px-4 py-2 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+<span class="text-sm font-semibold text-gray-700">SEAT模型表格视图</span>
+<button class="text-xs text-primary hover:underline" onclick="openExportConfig()">导出配置</button>
+</div>
+<div class="flex-1 overflow-auto" id="seat-table-container">
+<div class="p-4 text-sm text-gray-400">请先运行需求分析并生成SEAT模型</div>
+</div>
+</div>
 </div>
 <!-- 状态路径面板 -->
 <div class="h-1/3 bg-white border-t border-gray-200 flex flex-col shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-10">
@@ -1239,6 +1271,39 @@
 </div>
 <!-- Toast通知容器 -->
 <div id="toast-container"></div>
+<!-- 需求澄清弹窗 -->
+<div class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4" id="clarification-modal">
+<div class="bg-white rounded-xl shadow-lg w-full max-w-xl">
+<div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center">
+<h3 class="text-lg font-bold text-gray-800">需求澄清交互</h3>
+<button class="text-gray-400 hover:text-gray-600" onclick="closeClarificationModal()"><i class="fas fa-times"></i></button>
+</div>
+<div class="p-5 space-y-3 text-sm">
+<p class="text-gray-600">检测到需求存在歧义：<span class="font-medium text-gray-800">“系统在异常状态下应执行恢复操作”</span></p>
+<label class="block text-gray-700 font-medium">请补充恢复操作动作：</label>
+<textarea id="clarification-input" class="w-full border border-gray-300 rounded-lg p-3 h-24 outline-none focus:ring-2 focus:ring-primary" placeholder="例如：回滚最近事务、重置传感器、发送告警"></textarea>
+</div>
+<div class="px-5 py-4 border-t border-gray-100 flex justify-end gap-2">
+<button class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded" onclick="closeClarificationModal()">取消</button>
+<button class="px-4 py-2 text-sm bg-primary text-white rounded hover:bg-blue-600" onclick="confirmClarification()">确认并继续生成</button>
+</div>
+</div>
+</div>
+
+<!-- 导出配置弹窗 -->
+<div class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4" id="export-modal">
+<div class="bg-white rounded-xl shadow-lg w-full max-w-md">
+<div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center">
+<h3 class="text-lg font-bold text-gray-800">模型导出配置</h3>
+<button class="text-gray-400 hover:text-gray-600" onclick="closeExportConfig()"><i class="fas fa-times"></i></button>
+</div>
+<div class="p-5 space-y-3">
+<button class="w-full text-left border border-gray-200 rounded-lg p-3 hover:bg-gray-50" onclick="doExportModel('jsonc')"><div class="font-medium">JSONC（系统交换）</div><div class="text-xs text-gray-500">包含元信息、SEAT矩阵与注释</div></button>
+<button class="w-full text-left border border-gray-200 rounded-lg p-3 hover:bg-gray-50" onclick="doExportModel('excel')"><div class="font-medium">Excel（评审导入）</div><div class="text-xs text-gray-500">二维矩阵结构，便于人工审阅</div></button>
+</div>
+</div>
+</div>
+
 <!-- 知识编辑模态框 -->
 <div class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4" id="knowledge-modal">
 <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
@@ -1312,7 +1377,9 @@
             zipc: {
                 temp: 0.2,
                 isGenerating: false,
-                data: null
+                data: null,
+                analysisDone: false,
+                pendingClarification: false
             },
             chat: {
                 history: [],
@@ -1325,39 +1392,15 @@
             }
         };
 
-        const defaultZipcText = `初始节点
-→ 一阶段
-→ 二阶段
-→ 子节点1/启动触发
-→ 子节点1/停止触发
-→ 子节点1/切换至活动模式
-→ 一阶段
-→ 二阶段
-→ 子节点1/切换至活动模式
-→ 一阶段
-→ 二阶段
-→ 子节点1/切换至活动模式
-→ 一阶段
-→ 二阶段
-→ 子节点1/切换至活动模式
-→ 一阶段
-→ 二阶段
-→ 子节点1/切换至活动模式
-→ 一阶段
-→ 二阶段
-→ 子节点1/切换至活动模式
-→ 一阶段
-→ 二阶段
-→ 子节点1/切换至活动模式
-→ 一阶段
-→ 二阶段
-→ 子节点1/切换至活动模式
-→ 一阶段
-→ 二阶段
-→ 子节点1/切换至活动模式
-→ 一阶段
-→ 二阶段
-→ 子节点1/切换至活动模式`;
+        const defaultZipcText = `项目名称：冰箱控制系统
+需求概述：系统需要根据电源、温度和门体事件进行状态控制。
+关键状态：待机、运行（复合状态，含正常运行/压缩机启动/压缩机关闭）。
+关键事件：电源开关、温度过高、温度过低、门打开、门关闭。
+约束：非法操作需记录错误日志，未定义动作应标记为需求遗漏。
+补充需求：系统在异常状态下应执行恢复操作。`;
+
+        const zipcSeatDemo = {"主表0":{"meta":{"title":"冰箱控制状态机","description":"描述冰箱的运行与控制逻辑","symbols":{"A":{"/":"无操作","×":"非法操作（记录错误日志）","null":"动作未被定义(需求遗漏)","子表0.1":"激活制冷子系统"},"T":{"-":"保持当前状态","null":"动作未被定义(需求遗漏)"}},"initial":"待机"},"S":[{"name":"待机","type":"atomic"},{"name":"运行","type":"compound","children":"子表0.1","initial":"正常运行"}],"E":["电源开关","温度过高","温度过低","门打开","门关闭"],"SEAT":{"电源开关":{"待机":{"A":["@启动制冷系统","@初始化传感器"],"T":"运行"},"运行":{"A":["@停止制冷系统","@保存状态"],"T":"待机"}},"温度过高":{"待机":{"A":["/"],"T":"-"},"运行":{"A":["启动压缩机","增加制冷强度"],"T":"运行"}},"温度过低":{"待机":{"A":["/"],"T":"-"},"运行":{"A":["关闭压缩机","降低制冷强度"],"T":"运行"}},"门打开":{"待机":{"A":["/"],"T":"-"},"运行":{"A":["暂停制冷","记录门开事件"],"T":"运行"}},"门关闭":{"待机":{"A":["/"],"T":"-"},"运行":{"A":["恢复制冷","重新监测温度"],"T":"运行"}}}},"子表0.1":{"meta":{"title":"制冷子系统","parent":"主表0/运行","initial":"正常运行"},"S":[{"name":"正常运行","type":"atomic"},{"name":"压缩机启动","type":"atomic"},{"name":"压缩机关闭","type":"atomic"}],"E":["温度过高","温度过低","门打开","门关闭"],"SEAT":{"温度过高":{"正常运行":{"A":["启动压缩机","增加制冷强度"],"T":"压缩机启动"},"压缩机启动":{"A":["/"],"T":"压缩机启动"},"压缩机关闭":{"A":["×"],"T":"-"}},"温度过低":{"正常运行":{"A":["关闭压缩机","降低制冷强度"],"T":"压缩机关闭"},"压缩机启动":{"A":["×"],"T":"-"},"压缩机关闭":{"A":["启动压缩机","增加制冷强度"],"T":"正常运行"}},"门打开":{"正常运行":{"A":["暂停制冷","记录门开事件"],"T":"正常运行"},"压缩机启动":{"A":["暂停制冷","记录门开事件"],"T":"正常运行"},"压缩机关闭":{"A":["暂停制冷","记录门开事件"],"T":"正常运行"}},"门关闭":{"正常运行":{"A":["恢复制冷","重新监测温度"],"T":"正常运行"},"压缩机启动":{"A":["恢复制冷","重新监测温度"],"T":"正常运行"},"压缩机关闭":{"A":["恢复制冷","重新监测温度"],"T":"正常运行"}}}}};
+
 
         // 图表实例
         let zipcChart;
@@ -1372,6 +1415,7 @@
             initZipcChart();
             initKnowledgeGraph();
             initQAModule();
+            renderVersionHistory();
 
             // 处理窗口大小调整
             window.addEventListener('resize', () => {
@@ -1508,83 +1552,159 @@
             }
         }
 
-        function runGeneration() {
+        function runRequirementAnalysis() {
             if (state.zipc.isGenerating) return;
-            
             const text = document.getElementById('zipc-input').value;
-            if (!text.trim()) {
-                showToast('请输入需求文档或上传文件', 'error');
-                return;
-            }
-
+            if (!text.trim()) { showToast('请输入需求文档或上传文件', 'error'); return; }
             state.zipc.isGenerating = true;
             const btn = document.getElementById('btn-run');
             const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 处理中...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 需求分析中...';
             btn.disabled = true;
-
             document.getElementById('zipc-loading').classList.remove('hidden');
             document.getElementById('zipc-loading').classList.add('flex');
-
-            // 模拟处理延迟
+            updateTermProgress(20, '正在预处理文档...');
+            setTimeout(() => updateTermProgress(55, '正在进行术语识别...'), 400);
             setTimeout(() => {
-                processZipcData(text);
-                
+                renderTermList();
+                updateTermProgress(100, '术语识别完成');
+                state.zipc.analysisDone = true;
                 state.zipc.isGenerating = false;
                 btn.innerHTML = originalText;
                 btn.disabled = false;
                 document.getElementById('zipc-loading').classList.add('hidden');
                 document.getElementById('zipc-loading').classList.remove('flex');
-                
-                showToast('矩阵生成成功', 'success');
-            }, 1500);
+                showToast('需求分析完成，请继续生成SEAT模型', 'success');
+            }, 1300);
         }
 
-        function processZipcData(text) {
-            // 解析特定格式 "Node -> Node"
-            const lines = text.split('\n');
-            const nodes = new Map();
+        function updateTermProgress(percent, text) {
+            document.getElementById('term-progress-bar').style.width = percent + '%';
+            document.getElementById('term-progress-text').textContent = text;
+        }
+
+        function renderTermList() {
+            const terms = [
+                '复合状态：运行（子表0.1）',
+                '原子状态：待机 / 正常运行 / 压缩机启动 / 压缩机关闭',
+                '事件：电源开关、温度过高、温度过低、门打开、门关闭',
+                '动作：启动制冷系统、暂停制冷、恢复制冷',
+                '约束：非法操作×、未定义动作null'
+            ];
+            const html = terms.map((t, idx) => `<div class="flex items-start gap-2"><span class="mt-0.5 text-primary">${idx+1}.</span><span>${t}</span></div>`).join('');
+            document.getElementById('term-list').innerHTML = html;
+        }
+
+        function importFromHistory() {
+            document.getElementById('zipc-input').value = defaultZipcText + '\n（已从历史项目“冰箱控制V2”导入）';
+            showToast('已从历史项目导入需求文档', 'info');
+        }
+
+        function generateSeatModel() {
+            if (!state.zipc.analysisDone) { showToast('请先运行需求分析', 'warning'); return; }
+            const text = document.getElementById('zipc-input').value;
+            if (text.includes('异常状态') && !state.zipc.pendingClarification) {
+                state.zipc.pendingClarification = true;
+                document.getElementById('clarification-modal').classList.remove('hidden');
+                document.getElementById('clarification-modal').classList.add('flex');
+                return;
+            }
+            processZipcDataFromDemo();
+            renderSeatTable('主表0');
+            renderVersionHistory();
+            showToast('SEAT模型已生成', 'success');
+        }
+
+        function closeClarificationModal() {
+            document.getElementById('clarification-modal').classList.add('hidden');
+            document.getElementById('clarification-modal').classList.remove('flex');
+        }
+
+        function confirmClarification() {
+            const extra = document.getElementById('clarification-input').value.trim();
+            if (!extra) { showToast('请填写澄清内容', 'warning'); return; }
+            state.zipc.pendingClarification = false;
+            closeClarificationModal();
+            showToast('澄清信息已记录：' + extra, 'info');
+            processZipcDataFromDemo();
+            renderSeatTable('主表0');
+            renderVersionHistory();
+        }
+
+        function processZipcDataFromDemo() {
+            const main = zipcSeatDemo['主表0'];
+            const nodes = main.S.map(s => ({ name: s.name }));
             const links = [];
-            const pathSequence = [];
-            
-            let nodeCounter = 0;
-
-            lines.forEach(line => {
-                const parts = line.split('→').map(s => s.trim()).filter(s => s);
-                if (parts.length < 2) {
-                    if (parts.length === 1 && parts[0]) {
-                        // 初始节点
-                        if (!nodes.has(parts[0])) {
-                            nodes.set(parts[0], { name: parts[0], id: nodeCounter++ });
-                        }
-                        pathSequence.push(parts[0]);
-                    }
-                    return;
-                }
-
-                parts.forEach((part, index) => {
-                    if (!nodes.has(part)) {
-                        nodes.set(part, { name: part, id: nodeCounter++ });
-                    }
-                    if (index > 0) {
-                        const source = parts[index - 1];
-                        const target = part;
-                        
-                        // 检查链接是否已存在
-                        const existingLink = links.find(l => l.source === source && l.target === target);
-                        if (existingLink) {
-                            existingLink.value += 1;
-                        } else {
-                            links.push({ source, target, value: 1 });
-                        }
-                    }
-                    pathSequence.push(part);
+            const pathSequence = [main.meta.initial];
+            Object.entries(main.SEAT).forEach(([event, byState]) => {
+                Object.entries(byState).forEach(([from, cfg]) => {
+                    const to = cfg.T === '-' ? from : cfg.T;
+                    if (to && to !== 'null') links.push({ source: from, target: to, value: 1, event });
                 });
             });
-
-            state.zipc.data = { nodes: Array.from(nodes.values()), links, pathSequence };
+            pathSequence.push('运行','正常运行');
+            state.zipc.data = { nodes, links, pathSequence, seat: zipcSeatDemo };
             renderSankeyChart(state.zipc.data);
-            renderStatePath(state.zipc.data.pathSequence);
+            renderStatePath(pathSequence);
+        }
+
+        function renderSeatTable(tableKey='主表0') {
+            const table = zipcSeatDemo[tableKey];
+            const states = table.S.map(s => s.name);
+            const events = table.E;
+            let html = '<table class="min-w-full text-xs"><thead><tr class="bg-gray-50"><th class="px-3 py-2 text-left border-b">事件 / 状态</th>' + states.map(s=>`<th class="px-3 py-2 text-left border-b">${s}</th>`).join('') + '</tr></thead><tbody>';
+            events.forEach(e=>{
+                html += `<tr><td class="px-3 py-2 border-b font-medium text-gray-700">${e}</td>`;
+                states.forEach(st=>{
+                    const cell = table.SEAT[e]?.[st];
+                    const val = cell ? `T:${cell.T}<br>A:${cell.A.join('、')}` : 'null';
+                    html += `<td class="px-3 py-2 border-b text-gray-600">${val}</td>`;
+                });
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+            document.getElementById('seat-table-container').innerHTML = html;
+        }
+
+        function renderVersionHistory() {
+            const versions = [
+                {v:'v2.3.0', t:'2026-02-26 10:21', d:'完成术语识别与SEAT生成'},
+                {v:'v2.2.1', t:'2026-02-25 18:40', d:'补充门体事件转移规则'},
+                {v:'v2.1.0', t:'2026-02-24 16:12', d:'初始化冰箱控制状态机模板'}
+            ];
+            document.getElementById('zipc-version-list').innerHTML = versions.map(i=>`<button class="w-full text-left border border-gray-200 rounded p-2 hover:bg-white" onclick="showToast('已加载版本 ${i.v}', 'info')"><div class="font-semibold text-gray-700">${i.v}</div><div class="text-gray-500">${i.t} · ${i.d}</div></button>`).join('');
+        }
+
+        function openExportConfig() {
+            if (!state.zipc.data) { showToast('请先生成SEAT模型', 'warning'); return; }
+            document.getElementById('export-modal').classList.remove('hidden');
+            document.getElementById('export-modal').classList.add('flex');
+        }
+
+        function closeExportConfig() {
+            document.getElementById('export-modal').classList.add('hidden');
+            document.getElementById('export-modal').classList.remove('flex');
+        }
+
+        function doExportModel(format) {
+            const content = format === 'jsonc' ? JSON.stringify(zipcSeatDemo, null, 2) : 'Excel导出示例：可接入后端真实文件流';
+            const filename = format === 'jsonc' ? 'zipc-seat-model.jsonc' : 'zipc-seat-model.xlsx';
+            const mime = format === 'jsonc' ? 'application/json' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+            const blob = new Blob([content], { type: mime });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+            closeExportConfig();
+            showToast('已导出 ' + filename, 'success');
+        }
+
+        function exportData(type) {
+            if (type === 'zip') { openExportConfig(); return; }
+            if (!state.zipc.data) { showToast('暂无数据可导出，请先生成矩阵', 'warning'); return; }
+            const content = JSON.stringify(state.zipc.data, null, 2);
+            const blob = new Blob([content], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = 'zipc_matrix.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+            showToast('JSON 已成功保存', 'success');
         }
 
         function initZipcChart() {
