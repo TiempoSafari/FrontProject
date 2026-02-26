@@ -1762,6 +1762,10 @@
 
         function initZipcChart() {
             const dom = document.getElementById('sankey-chart');
+            if (!dom || typeof echarts === 'undefined') {
+                zipcChart = null;
+                return;
+            }
             zipcChart = echarts.init(dom);
             // 初始显示空图表
             zipcChart.setOption({
@@ -1775,6 +1779,7 @@
         }
 
         function renderSankeyChart(data) {
+            if (!zipcChart) return;
             const option = {
                 tooltip: {
                     trigger: 'item',
@@ -2206,6 +2211,10 @@
         // --- 知识管理模块逻辑 ---
         function initKnowledgeGraph() {
             const dom = document.getElementById('knowledge-graph');
+            if (!dom || typeof echarts === 'undefined') {
+                kgChart = null;
+                return;
+            }
             kgChart = echarts.init(dom);
             
             const option = {
