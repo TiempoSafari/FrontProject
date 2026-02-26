@@ -8,6 +8,7 @@
 <!-- 第三方库导入 -->
 <script src="https://image.uc.cn/s/uae/g/3n/mos-production/fontawesome-free-7.1.0-web/js/all.min.js"></script>
 <script src="https://image.uc.cn/s/uae/g/3n/mos-production/0915/3.4.17.js"></script>
+<script src="https://image.uc.cn/s/uae/g/3n/mos-production/0915/echarts.min.js"></script>
 <style>
         /* 自定义滚动条 */
         ::-webkit-scrollbar {
@@ -30,25 +31,25 @@
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        
+
         @keyframes slideInRight {
             from { transform: translateX(-100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
-        
+
         @keyframes slideInLeft {
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
-        
+
         .fade-in {
             animation: fadeIn 0.3s ease-in-out;
         }
-        
+
         .slide-in-right {
             animation: slideInRight 0.3s ease-out;
         }
-        
+
         .slide-in-left {
             animation: slideInLeft 0.3s ease-out;
         }
@@ -57,7 +58,7 @@
         @keyframes blink {
             50% { border-color: transparent; }
         }
-        
+
         .typing-cursor::after {
             content: '|';
             animation: blink 1s step-end infinite;
@@ -69,7 +70,7 @@
             background-size: 200% 100%;
             animation: loading 1.5s infinite;
         }
-        
+
         @keyframes loading {
             0% { background-position: 200% 0; }
             100% { background-position: -200% 0; }
@@ -85,7 +86,7 @@
             flex-direction: column;
             gap: 10px;
         }
-        
+
         .toast {
             min-width: 300px;
             padding: 16px;
@@ -122,7 +123,7 @@
             border-left-color: #3B82F6;
             color: #1e40af;
         }
-        
+
         .nav-item.active i {
             color: #3B82F6;
         }
@@ -343,7 +344,7 @@
 </div>
 </div>
 <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
-<div class="text-sm font-semibold text-gray-700 mb-2">版本历史（演示）</div>
+<div class="text-sm font-semibold text-gray-700 mb-2">版本历史</div>
 <div class="space-y-2 text-xs" id="zipc-version-list"></div>
 </div>
 <!-- 元信息 -->
@@ -359,7 +360,7 @@
 <div class="w-full md:w-[65%] bg-bgLight flex flex-col h-full overflow-hidden relative">
 <!-- 工具栏 -->
 <div class="h-12 bg-white border-b border-gray-200 flex items-center justify-between px-4 shadow-sm z-10">
-<h2 class="font-bold text-gray-700">状态转移矩阵（ZPC 模型）</h2>
+<h2 class="font-bold text-gray-700">状态转移矩阵（ZIPC 模型）</h2>
 <div class="flex gap-2">
 <button class="text-gray-500 hover:text-primary" onclick="resetZipcView()" title="重置视图">
 <i class="fas fa-compress"></i>
@@ -376,19 +377,15 @@
 <div class="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
 <span class="text-primary font-medium">正在生成状态变迁矩阵...</span>
 </div>
-<div class="h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+<!-- Sankey图容器 -->
+<div class="w-full h-[58%] bg-white rounded-xl shadow-sm border border-gray-200" id="sankey-chart"></div>
+<div class="mt-3 h-[42%] bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
 <div class="px-4 py-2 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
 <span class="text-sm font-semibold text-gray-700">SEAT模型表格视图</span>
-<div class="flex items-center gap-3">
-<button class="text-xs text-gray-500 hover:text-primary" onclick="toggleSankeyPanel()" id="toggle-sankey-btn">显示状态矩阵</button>
 <button class="text-xs text-primary hover:underline" onclick="openExportConfig()">导出配置</button>
-</div>
 </div>
 <div class="flex-1 overflow-auto" id="seat-table-container">
 <div class="p-4 text-sm text-gray-400">请先运行需求分析并生成SEAT模型</div>
-</div>
-<div class="hidden border-t border-gray-100 p-3" id="sankey-panel">
-<div class="w-full h-72" id="sankey-chart"></div>
 </div>
 </div>
 </div>
@@ -1413,12 +1410,12 @@
         document.addEventListener('DOMContentLoaded', () => {
             // 设置默认文本
             document.getElementById('zipc-input').value = defaultZipcText;
-            
-            // 初始化模块（容错）
-            safeInit(initZipcChart, 'ZIPC矩阵预览初始化失败');
-            safeInit(initKnowledgeGraph, '知识图谱初始化失败');
-            safeInit(initQAModule, '问答模块初始化失败');
-            safeInit(renderVersionHistory, '版本历史初始化失败');
+
+            // 初始化图表实例
+            initZipcChart();
+            initKnowledgeGraph();
+            initQAModule();
+            renderVersionHistory();
 
             // 处理窗口大小调整
             window.addEventListener('resize', () => {
@@ -1446,34 +1443,25 @@
             }
         }
 
-        function safeInit(fn, failMessage) {
-            try {
-                if (typeof fn === 'function') fn();
-            } catch (e) {
-                console.error(e);
-                showToast(failMessage, 'warning');
-            }
-        }
-
         function switchTab(tabId) {
             state.activeTab = tabId;
-            
+
             // 更新导航UI
             document.querySelectorAll('.nav-item').forEach(item => {
                 item.classList.remove('active');
                 item.classList.remove('bg-blue-50', 'text-primary', 'border-l-4', 'border-primary');
             });
-            
+
             // 激活当前选中的导航项
             const navItems = document.querySelectorAll('.nav-item');
             for (let item of navItems) {
-                if (item.querySelector('span')?.textContent?.includes(tabId === 'zipc' ? 'ZIPC矩阵生成' : 
-                    tabId === 'qa' ? '需求智能问答' : 
-                    tabId === 'knowledge' ? '知识管理' : 
-                    tabId === 'upload' ? '文件上传' : 
-                    tabId === 'projects' ? '项目管理' : 
-                    tabId === 'models' ? '模型管理' : 
-                    tabId === 'profile' ? '个人中心' : 
+                if (item.querySelector('span')?.textContent?.includes(tabId === 'zipc' ? 'ZIPC矩阵生成' :
+                    tabId === 'qa' ? '需求智能问答' :
+                    tabId === 'knowledge' ? '知识管理' :
+                    tabId === 'upload' ? '文件上传' :
+                    tabId === 'projects' ? '项目管理' :
+                    tabId === 'models' ? '模型管理' :
+                    tabId === 'profile' ? '个人中心' :
                     tabId === 'admin' ? '系统管理' : '')) {
                     item.classList.add('active');
                     item.classList.add('bg-blue-50', 'text-primary', 'border-l-4', 'border-primary');
@@ -1488,13 +1476,13 @@
                 if (id === tabId) {
                     el.classList.remove('opacity-0', 'pointer-events-none');
                     el.classList.add('z-10');
-                    
+
                     // 当模块可见时调整图表大小
                     if (id === 'zipc' && zipcChart) {
                         setTimeout(() => zipcChart.resize(), 50);
                     }
                     if (id === 'knowledge' && kgChart) {
-                        if (kgChart && typeof kgChart.resize === 'function') setTimeout(() => kgChart.resize(), 50);
+                        setTimeout(() => kgChart.resize(), 50);
                     }
                 } else {
                     el.classList.add('opacity-0', 'pointer-events-none');
@@ -1512,11 +1500,11 @@
         function toggleSidebar(show) {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('mobile-overlay');
-            
+
             if (show === undefined) {
                 show = sidebar.classList.contains('-translate-x-full');
             }
-            
+
             if (show) {
                 sidebar.classList.remove('-translate-x-full');
                 overlay.style.display = 'block';
@@ -1533,7 +1521,7 @@
             state.zipc.temp = parseFloat(val);
             if (state.zipc.temp < 0) state.zipc.temp = 0;
             if (state.zipc.temp > 1) state.zipc.temp = 1;
-            
+
             document.getElementById('temp-slider').value = state.zipc.temp;
             document.getElementById('temp-input').value = state.zipc.temp;
         }
@@ -1542,7 +1530,7 @@
             if (input.files && input.files[0]) {
                 const file = input.files[0];
                 showToast(`已加载文件: ${file.name}`, 'success');
-                
+
                 // 模拟读取文件
                 const reader = new FileReader();
                 reader.onload = (e) => {
@@ -1556,7 +1544,7 @@
             if (input.files && input.files.length > 0) {
                 const count = input.files.length;
                 showToast(`已选择 ${count} 个文件，开始上传...`, 'info');
-                
+
                 // 模拟上传过程
                 setTimeout(() => {
                     showToast(`${count} 个文件上传完成`, 'success');
@@ -1566,60 +1554,28 @@
 
         function runRequirementAnalysis() {
             if (state.zipc.isGenerating) return;
-            const inputEl = document.getElementById('zipc-input');
-            const text = inputEl ? inputEl.value : '';
-            if (!text.trim()) {
-                showToast('请输入需求文档或上传文件', 'error');
-                return;
-            }
-
+            const text = document.getElementById('zipc-input').value;
+            if (!text.trim()) { showToast('请输入需求文档或上传文件', 'error'); return; }
             state.zipc.isGenerating = true;
             const btn = document.getElementById('btn-run');
-            const originalText = btn ? btn.innerHTML : '';
-            try {
-                if (btn) {
-                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 需求分析中...';
-                    btn.disabled = true;
-                }
-                const loading = document.getElementById('zipc-loading');
-                if (loading) {
-                    loading.classList.remove('hidden');
-                    loading.classList.add('flex');
-                }
-
-                updateTermProgress(20, '正在预处理文档...');
-                setTimeout(() => updateTermProgress(55, '正在进行术语识别...'), 350);
-                setTimeout(() => {
-                    try {
-                        renderTermList();
-                        updateTermProgress(100, '术语识别完成');
-                        state.zipc.analysisDone = true;
-                        showToast('需求分析完成，请继续生成SEAT模型', 'success');
-                    } catch (e) {
-                        console.error(e);
-                        showToast('需求分析过程出现异常', 'error');
-                    } finally {
-                        state.zipc.isGenerating = false;
-                        if (btn) {
-                            btn.innerHTML = originalText;
-                            btn.disabled = false;
-                        }
-                        const loading2 = document.getElementById('zipc-loading');
-                        if (loading2) {
-                            loading2.classList.add('hidden');
-                            loading2.classList.remove('flex');
-                        }
-                    }
-                }, 1100);
-            } catch (e) {
-                console.error(e);
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 需求分析中...';
+            btn.disabled = true;
+            document.getElementById('zipc-loading').classList.remove('hidden');
+            document.getElementById('zipc-loading').classList.add('flex');
+            updateTermProgress(20, '正在预处理文档...');
+            setTimeout(() => updateTermProgress(55, '正在进行术语识别...'), 400);
+            setTimeout(() => {
+                renderTermList();
+                updateTermProgress(100, '术语识别完成');
+                state.zipc.analysisDone = true;
                 state.zipc.isGenerating = false;
-                if (btn) {
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                }
-                showToast('运行需求分析失败', 'error');
-            }
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                document.getElementById('zipc-loading').classList.add('hidden');
+                document.getElementById('zipc-loading').classList.remove('flex');
+                showToast('需求分析完成，请继续生成SEAT模型', 'success');
+            }, 1300);
         }
 
         function updateTermProgress(percent, text) {
@@ -1654,7 +1610,7 @@
                 return;
             }
             processZipcDataFromDemo();
-            renderSeatTable();
+            renderSeatTable('主表0');
             renderVersionHistory();
             showToast('SEAT模型已生成', 'success');
         }
@@ -1671,7 +1627,7 @@
             closeClarificationModal();
             showToast('澄清信息已记录：' + extra, 'info');
             processZipcDataFromDemo();
-            renderSeatTable();
+            renderSeatTable('主表0');
             renderVersionHistory();
         }
 
@@ -1692,63 +1648,22 @@
             renderStatePath(pathSequence);
         }
 
-        function renderSeatTable() {
-            const container = document.getElementById('seat-table-container');
-            if (!container) return;
-            if (!zipcSeatDemo || typeof zipcSeatDemo !== 'object') {
-                container.innerHTML = '<div class="p-4 text-sm text-red-500">演示数据缺失，无法渲染SEAT表</div>';
-                return;
-            }
-            const tableOrder = ['主表0', '子表0.1'];
-            const html = tableOrder
-                .filter(key => zipcSeatDemo[key])
-                .map(key => renderSingleSeatTable(key, zipcSeatDemo[key]))
-                .join('');
-            container.innerHTML = html || '<div class="p-4 text-sm text-red-500">未找到可渲染的SEAT表数据</div>';
-        }
-
-        function renderSingleSeatTable(tableKey, table) {
+        function renderSeatTable(tableKey='主表0') {
+            const table = zipcSeatDemo[tableKey];
             const states = table.S.map(s => s.name);
             const events = table.E;
-            const symbols = table.meta?.symbols || {};
-            const symbolRows = Object.entries(symbols).flatMap(([group, vals]) =>
-                Object.entries(vals).map(([symbol, desc]) => `<span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-blue-50 text-blue-700"><strong>${group}:${symbol}</strong><span>${desc}</span></span>`)
-            );
-
-            let rows = '';
-            events.forEach(eventName => {
-                rows += `<tr><td class="px-3 py-2 border-b font-medium text-gray-700 whitespace-nowrap">${eventName}</td>`;
-                states.forEach(stateName => {
-                    const cell = table.SEAT[eventName]?.[stateName];
-                    const transition = cell?.T ?? 'null';
-                    const actions = cell?.A?.length ? cell.A.join('、') : 'null';
-                    rows += `<td class="px-3 py-2 border-b align-top text-gray-600"><div><span class="text-gray-400">T:</span> ${transition}</div><div><span class="text-gray-400">A:</span> ${actions}</div></td>`;
+            let html = '<table class="min-w-full text-xs"><thead><tr class="bg-gray-50"><th class="px-3 py-2 text-left border-b">事件 / 状态</th>' + states.map(s=>`<th class="px-3 py-2 text-left border-b">${s}</th>`).join('') + '</tr></thead><tbody>';
+            events.forEach(e=>{
+                html += `<tr><td class="px-3 py-2 border-b font-medium text-gray-700">${e}</td>`;
+                states.forEach(st=>{
+                    const cell = table.SEAT[e]?.[st];
+                    const val = cell ? `T:${cell.T}<br>A:${cell.A.join('、')}` : 'null';
+                    html += `<td class="px-3 py-2 border-b text-gray-600">${val}</td>`;
                 });
-                rows += '</tr>';
+                html += '</tr>';
             });
             html += '</tbody></table>';
             document.getElementById('seat-table-container').innerHTML = html;
-        }
-
-            return `
-                <div class="p-3 border-b border-gray-100">
-                    <div class="text-center font-semibold text-gray-800">${tableKey}</div>
-                    <div class="text-center text-xs text-gray-500 mb-2">${table.meta?.title || ''}</div>
-                    <div class="text-xs text-gray-500 mb-2">初始状态：${table.meta?.initial || '-'}</div>
-                    ${symbolRows.length ? `<div class="flex flex-wrap gap-2 mb-3 text-xs">${symbolRows.join('')}</div>` : ''}
-                    <div class="overflow-auto">
-                        <table class="min-w-full text-xs border border-gray-200">
-                            <thead>
-                                <tr class="bg-gray-50">
-                                    <th class="px-3 py-2 text-left border-b border-r">事件 / 状态</th>
-                                    ${states.map(name => `<th class="px-3 py-2 text-left border-b border-r last:border-r-0 whitespace-nowrap">${name}</th>`).join('')}
-                                </tr>
-                            </thead>
-                            <tbody>${rows}</tbody>
-                        </table>
-                    </div>
-                </div>
-            `;
         }
 
         function renderVersionHistory() {
@@ -1792,64 +1707,74 @@
             showToast('JSON 已成功保存', 'success');
         }
 
-        function toggleSankeyPanel() {
-            const panel = document.getElementById('sankey-panel');
-            const btn = document.getElementById('toggle-sankey-btn');
-            const isHidden = panel.classList.contains('hidden');
-            if (isHidden) {
-                panel.classList.remove('hidden');
-                btn.textContent = '隐藏状态矩阵';
-                if (zipcChart) setTimeout(() => zipcChart.resize(), 30);
-            } else {
-                panel.classList.add('hidden');
-                btn.textContent = '显示状态矩阵';
-            }
-        }
-
         function initZipcChart() {
             const dom = document.getElementById('sankey-chart');
-            if (!dom) return;
-            dom.innerHTML = '<div class="h-full flex items-center justify-center text-sm text-gray-400">状态矩阵预览（HTML）将在生成后显示</div>';
-            zipcChart = null;
+            zipcChart = echarts.init(dom);
+            // 初始显示空图表
+            zipcChart.setOption({
+                title: {
+                    text: '等待数据...',
+                    left: 'center',
+                    top: 'center',
+                    textStyle: { color: '#999' }
+                }
+            });
         }
 
         function renderSankeyChart(data) {
-            const dom = document.getElementById('sankey-chart');
-            if (!dom) return;
-            const links = (data.links || []).map(link => `
-                <tr>
-                    <td class="px-3 py-2 border-b text-gray-700">${escapeHtml(link.source)}</td>
-                    <td class="px-3 py-2 border-b text-gray-500">→</td>
-                    <td class="px-3 py-2 border-b text-gray-700">${escapeHtml(link.target)}</td>
-                    <td class="px-3 py-2 border-b text-gray-500">${escapeHtml(link.event || '状态转移')}</td>
-                </tr>
-            `).join('');
-            dom.innerHTML = `
-                <div class="h-full overflow-auto border border-gray-200 rounded-lg">
-                    <table class="min-w-full text-xs">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-3 py-2 text-left border-b">起始状态</th>
-                                <th class="px-3 py-2 text-left border-b"></th>
-                                <th class="px-3 py-2 text-left border-b">目标状态</th>
-                                <th class="px-3 py-2 text-left border-b">触发事件</th>
-                            </tr>
-                        </thead>
-                        <tbody>${links || '<tr><td class="px-3 py-3 text-gray-400" colspan="4">暂无状态转移数据</td></tr>'}</tbody>
-                    </table>
-                </div>
-            `;
+            const option = {
+                tooltip: {
+                    trigger: 'item',
+                    triggerOn: 'mousemove'
+                },
+                series: [
+                    {
+                        type: 'sankey',
+                        layout: 'none',
+                        emphasis: {
+                            focus: 'adjacency'
+                        },
+                        data: data.nodes.map(n => ({ name: n.name })),
+                        links: data.links,
+                        top: '10%',
+                        bottom: '10%',
+                        left: '10%',
+                        right: '10%',
+                        nodeWidth: 20,
+                        nodeGap: 8,
+                        lineStyle: {
+                            color: 'gradient',
+                            curveness: 0.5
+                        },
+                        label: {
+                            fontSize: 12
+                        },
+                        levels: [{
+                            depth: 0,
+                            itemStyle: { color: '#3B82F6' },
+                            lineStyle: { color: 'source', opacity: 0.6 }
+                        }, {
+                            depth: 1,
+                            itemStyle: { color: '#6B7280' }
+                        }, {
+                            depth: 2,
+                            itemStyle: { color: '#10B981' }
+                        }]
+                    }
+                ]
+            };
+            zipcChart.setOption(option, true);
         }
 
         function renderStatePath(sequence) {
             const container = document.getElementById('state-path-container');
             container.innerHTML = '';
-            
+
             sequence.forEach((node, index) => {
                 const span = document.createElement('span');
                 span.className = 'px-2 py-1 bg-white border border-gray-200 rounded text-xs text-gray-600 shadow-sm';
                 span.textContent = node;
-                
+
                 // 添加箭头
                 if (index < sequence.length - 1) {
                     const arrow = document.createElement('i');
@@ -1860,7 +1785,7 @@
                     // 最后一个节点高亮
                     span.classList.add('bg-blue-50', 'text-primary', 'border-primary');
                     container.appendChild(span);
-                    
+
                     // 更新状态文本
                     document.getElementById('current-state-text').textContent = `当前状态：${node}`;
                 }
@@ -1868,32 +1793,31 @@
         }
 
         function resetZipcView() {
-            const dom = document.getElementById('sankey-chart');
-            if (!dom) return;
-            if (!state.zipc.data?.links?.length) {
-                showToast('暂无矩阵可重置', 'info');
-                return;
+            if (zipcChart) {
+                zipcChart.dispatchAction({
+                    type: 'restore'
+                });
+                showToast('视图已重置', 'info');
             }
-            renderSankeyChart(state.zipc.data);
-            showToast('已重置为默认状态矩阵预览', 'info');
         }
 
         function downloadChartImage() {
-            if (!state.zipc.data) {
-                showToast('暂无可下载数据，请先生成SEAT模型', 'warning');
-                return;
+            if (zipcChart) {
+                const imgUrl = zipcChart.getDataURL({
+                    type: 'png',
+                    pixelRatio: 2,
+                    backgroundColor: '#fff'
+                });
+
+                const a = document.createElement('a');
+                a.href = imgUrl;
+                a.download = 'zipc-matrix.png';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+
+                showToast('图表已下载为PNG图片', 'success');
             }
-            const content = JSON.stringify(state.zipc.data, null, 2);
-            const blob = new Blob([content], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'zipc-transition-preview.json';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            showToast('已下载状态矩阵预览数据(JSON)', 'success');
         }
 
         function exportData(type) {
@@ -1901,7 +1825,7 @@
                 showToast('暂无数据可导出，请先生成矩阵', 'warning');
                 return;
             }
-            
+
             let content, filename, mime;
             if (type === 'json') {
                 content = JSON.stringify(state.zipc.data, null, 2);
@@ -1922,7 +1846,7 @@
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            
+
             showToast(`${type.toUpperCase()} 已成功保存`, 'success');
         }
 
@@ -2229,18 +2153,44 @@
         // --- 知识管理模块逻辑 ---
         function initKnowledgeGraph() {
             const dom = document.getElementById('knowledge-graph');
-            if (!dom) return;
-            dom.innerHTML = `
-                <div class="h-full p-4 overflow-auto">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                        <div class="bg-white border border-gray-200 rounded-lg p-3"><div class="font-semibold text-primary mb-1">ZIPC模型</div><div class="text-gray-500">核心节点：状态定义、转移规则、验证与推理</div></div>
-                        <div class="bg-white border border-gray-200 rounded-lg p-3"><div class="font-semibold text-green-600 mb-1">状态定义</div><div class="text-gray-500">关联：验证</div></div>
-                        <div class="bg-white border border-gray-200 rounded-lg p-3"><div class="font-semibold text-amber-600 mb-1">需求工程</div><div class="text-gray-500">关联：ZIPC模型</div></div>
-                        <div class="bg-white border border-gray-200 rounded-lg p-3"><div class="font-semibold text-gray-700 mb-1">系统架构</div><div class="text-gray-500">关联：需求工程</div></div>
-                    </div>
-                </div>
-            `;
-            kgChart = null;
+            kgChart = echarts.init(dom);
+
+            const option = {
+                tooltip: {},
+                animationDurationUpdate: 1500,
+                animationEasingUpdate: 'quinticInOut',
+                series: [
+                    {
+                        type: 'graph',
+                        layout: 'force',
+                        force: {
+                            repulsion: 200,
+                            edgeLength: 100
+                        },
+                        data: [
+                            { name: 'ZIPC模型', symbolSize: 50, itemStyle: { color: '#3B82F6' } },
+                            { name: '状态定义', symbolSize: 30, itemStyle: { color: '#10B981' } },
+                            { name: '转移规则', symbolSize: 30, itemStyle: { color: '#10B981' } },
+                            { name: '需求工程', symbolSize: 40, itemStyle: { color: '#F59E0B' } },
+                            { name: '验证', symbolSize: 20 },
+                            { name: '推理', symbolSize: 20 },
+                            { name: '系统架构', symbolSize: 40, itemStyle: { color: '#6B7280' } }
+                        ],
+                        links: [
+                            { source: 'ZIPC模型', target: '状态定义' },
+                            { source: 'ZIPC模型', target: '转移规则' },
+                            { source: '状态定义', target: '验证' },
+                            { source: '转移规则', target: '推理' },
+                            { source: '需求工程', target: 'ZIPC模型' },
+                            { source: '系统架构', target: '需求工程' }
+                        ],
+                        roam: true,
+                        label: { show: true, position: 'right', formatter: '{b}' },
+                        lineStyle: { color: 'source', curveness: 0.3 }
+                    }
+                ]
+            };
+            kgChart.setOption(option);
         }
 
         function toggleKnowledgeView(view) {
@@ -2255,10 +2205,10 @@
                 graphBtn.classList.remove('text-gray-500');
                 cardBtn.classList.remove('text-primary', 'font-bold', 'border-b-2', 'border-primary');
                 cardBtn.classList.add('text-gray-500');
-                
+
                 graphDiv.classList.remove('hidden');
                 cardDiv.classList.add('hidden');
-                if (kgChart && typeof kgChart.resize === 'function') setTimeout(() => kgChart.resize(), 50);
+                setTimeout(() => kgChart.resize(), 50);
             } else {
                 cardBtn.classList.add('text-primary', 'font-bold', 'border-b-2', 'border-primary');
                 cardBtn.classList.remove('text-gray-500');
@@ -2271,7 +2221,13 @@
         }
 
         function zoomGraph(factor) {
-            showToast('当前为HTML静态图谱演示，缩放功能已禁用', 'info');
+            if (kgChart) {
+                const option = kgChart.getOption();
+                kgChart.dispatchAction({
+                    type: 'dataZoom',
+                    batch: [{ start: 0, end: 100 * factor }]
+                });
+            }
         }
 
         function selectKnowledgeItem(itemId) {
