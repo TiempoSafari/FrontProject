@@ -362,46 +362,17 @@
 <section class="w-full h-full flex flex-col md:flex-row absolute inset-0 opacity-0 pointer-events-none transition-opacity duration-300 bg-bgLight" id="module-qa">
 <!-- 左侧：历史记录 -->
 <aside class="w-full md:w-[30%] bg-white border-r border-gray-200 flex flex-col h-full z-20">
-<div class="p-4 border-b border-gray-100">
+<div class="p-4 border-b border-gray-100 space-y-3">
 <div class="relative">
-<input class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-primary outline-none" placeholder="搜索历史记录..." type="text"/>
+<input class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-primary outline-none" id="chat-history-search" oninput="filterChatHistory(this.value)" placeholder="搜索历史记录..." type="text"/>
 <i class="fas fa-search absolute left-3 top-2.5 text-gray-400 text-xs"></i>
 </div>
-</div>
-<div class="flex-1 overflow-y-auto">
-<div class="px-4 py-2 text-xs font-bold text-gray-400 uppercase">今天</div>
-<div class="px-2 space-y-1">
-<div class="p-3 rounded-lg hover:bg-blue-50 cursor-pointer group transition bg-blue-50 border-l-4 border-primary" onclick="loadChatHistory('zipc-question')">
-<div class="text-sm font-medium text-gray-800 truncate">ZIPC状态机配置问题</div>
-<div class="text-xs text-gray-500 mt-1 flex justify-between">
-<span>10:30</span>
-<i class="far fa-star text-gray-300 group-hover:text-yellow-400"></i>
+<div class="grid grid-cols-2 gap-2">
+<button class="text-sm bg-primary text-white py-2 rounded-lg hover:bg-blue-600 transition" onclick="startNewChat()"><i class="fas fa-plus mr-1"></i>新建对话</button>
+<button class="text-sm border border-gray-200 text-gray-600 py-2 rounded-lg hover:bg-gray-50 transition" onclick="clearChatHistory()"><i class="fas fa-trash-alt mr-1"></i>清空历史</button>
 </div>
 </div>
-<div class="p-3 rounded-lg hover:bg-gray-50 cursor-pointer group transition border-l-4 border-transparent" onclick="loadChatHistory('export-question')">
-<div class="text-sm font-medium text-gray-800 truncate">如何导出矩阵数据？</div>
-<div class="text-xs text-gray-500 mt-1 flex justify-between">
-<span>09:15</span>
-<i class="far fa-star text-gray-300 group-hover:text-yellow-400"></i>
-</div>
-</div>
-</div>
-<div class="px-4 py-2 text-xs font-bold text-gray-400 uppercase mt-4">过去7天</div>
-<div class="px-2 space-y-1">
-<div class="p-3 rounded-lg hover:bg-gray-50 cursor-pointer group transition border-l-4 border-transparent" onclick="loadChatHistory('knowledge-question')">
-<div class="text-sm font-medium text-gray-800 truncate">知识图谱节点关联逻辑</div>
-<div class="text-xs text-gray-500 mt-1 flex justify-between">
-<span>2月24日</span>
-<i class="far fa-star text-gray-300 group-hover:text-yellow-400"></i>
-</div>
-</div>
-</div>
-</div>
-<div class="p-4 border-t border-gray-200">
-<button class="w-full text-left text-sm text-gray-600 hover:text-primary flex items-center gap-2" onclick="startNewChat()">
-<i class="fas fa-plus"></i> 新建对话
-                            </button>
-</div>
+<div class="flex-1 overflow-y-auto px-2 py-2 space-y-1" id="chat-history-list"></div>
 </aside>
 <!-- 右侧：聊天界面 -->
 <div class="w-full md:w-[70%] flex flex-col h-full bg-white">
@@ -409,6 +380,9 @@
 <div class="h-14 bg-primary text-white flex items-center px-6 shadow-md flex-shrink-0">
 <span class="font-bold text-lg">需求智能问答</span>
 <span class="ml-auto text-sm opacity-80"><i class="fas fa-robot mr-1"></i>AI 助手在线</span>
+</div>
+<div class="px-6 py-2 border-b border-gray-200 bg-blue-50 text-sm text-blue-700" id="qa-status-bar">
+<i class="fas fa-circle-check mr-1"></i> 就绪：可提问 ZIPC 建模、状态机设计、术语定义等问题。
 </div>
 <!-- 消息区域 -->
 <div class="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50" id="chat-messages">
@@ -1327,6 +1301,8 @@
             },
             chat: {
                 history: [],
+                sessions: [],
+                activeSessionId: null,
                 isTyping: false
             },
             knowledge: {
@@ -1380,6 +1356,7 @@
             // 初始化图表实例
             initZipcChart();
             initKnowledgeGraph();
+            initQAModule();
 
             // 处理窗口大小调整
             window.addEventListener('resize', () => {
@@ -1732,52 +1709,258 @@
         }
 
         // --- 聊天模块逻辑 ---
+        const qaDemoSessions = [
+            {
+                id: 'demo-term',
+                title: '什么是复合状态？',
+                timeLabel: '今天 10:30',
+                messages: [
+                    { type: 'assistant', text: '您好！我是您的智能需求助手。您可以询问关于ZIPC状态变迁矩阵、需求文档解析或知识库管理的任何问题。' },
+                    { type: 'user', text: '什么是复合状态？' },
+                    {
+                        type: 'assistant',
+                        answer: {
+                            text: '复合状态（Composite State）是指在一个父状态内部包含多个子状态的状态结构。\n\n在 ZIPC 建模中，复合状态用于把复杂行为拆分为可管理的层级：父状态描述业务阶段，子状态描述执行步骤。这样可以减少状态爆炸并提升可维护性。',
+                            sources: [
+                                { label: '《ZIPC术语定义》- 2.3 复合状态', href: '#', tag: '术语库' },
+                                { label: '《ZIPC操作手册》- 4.1 分层状态建模', href: '#', tag: '操作手册' }
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                id: 'demo-transfer',
+                title: '状态转移函数的作用',
+                timeLabel: '今天 09:15',
+                messages: [
+                    { type: 'assistant', text: '您好！我是您的智能需求助手。您可以询问关于ZIPC状态变迁矩阵、需求文档解析或知识库管理的任何问题。' },
+                    { type: 'user', text: '状态转移函数的作用是什么？' },
+                    {
+                        type: 'assistant',
+                        answer: {
+                            text: '状态转移函数用于定义系统在接收输入事件后，从当前状态迁移到目标状态的规则。\n\n简化表达为：δ(当前状态, 触发事件, 守卫条件) -> 下一状态。它是保证状态机行为可验证、可复现的核心机制。',
+                            sources: [
+                                { label: '《ZIPC模型规范》- 3.2 状态转移函数', href: '#', tag: '规范文档' },
+                                { label: '《需求建模指南》- 5.4 事件与守卫条件', href: '#', tag: '建模指南' }
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                id: 'demo-unknown',
+                title: '如何进行系统性能优化？',
+                timeLabel: '2月24日',
+                messages: [
+                    { type: 'assistant', text: '您好！我是您的智能需求助手。您可以询问关于ZIPC状态变迁矩阵、需求文档解析或知识库管理的任何问题。' },
+                    { type: 'user', text: '如何进行系统性能优化？' },
+                    {
+                        type: 'assistant',
+                        answer: {
+                            text: '该问题超出了当前 ZIPC 需求建模知识库的覆盖范围。\n\n我目前主要支持 ZIPC 建模、状态机设计、术语定义与规范解释。建议您参考系统架构优化资料，或咨询性能工程专家。',
+                            sources: [
+                                { label: '知识范围说明', href: '#', tag: '系统提示' }
+                            ]
+                        }
+                    }
+                ]
+            }
+        ];
+
+        function initQAModule() {
+            state.chat.sessions = qaDemoSessions.map(s => ({ ...s, messages: s.messages.map(m => ({ ...m })) }));
+            state.chat.activeSessionId = state.chat.sessions[0]?.id || null;
+            renderChatHistory();
+            loadChatHistory(state.chat.activeSessionId, true);
+        }
+
+        function renderChatHistory(keyword = '') {
+            const list = document.getElementById('chat-history-list');
+            const normalized = keyword.trim().toLowerCase();
+            const sessions = state.chat.sessions.filter(item => item.title.toLowerCase().includes(normalized));
+
+            list.innerHTML = sessions.length ? sessions.map(item => `
+                <button class="w-full text-left p-3 rounded-lg transition border-l-4 ${item.id === state.chat.activeSessionId ? 'bg-blue-50 border-primary' : 'hover:bg-gray-50 border-transparent'}" onclick="loadChatHistory('${item.id}')">
+                    <div class="text-sm font-medium text-gray-800 truncate">${escapeHtml(item.title)}</div>
+                    <div class="text-xs text-gray-500 mt-1 flex justify-between">
+                        <span>${item.timeLabel}</span>
+                        <i class="fas fa-history ${item.id === state.chat.activeSessionId ? 'text-primary' : 'text-gray-300'}"></i>
+                    </div>
+                </button>
+            `).join('') : '<div class="p-4 text-sm text-gray-400">未找到匹配的对话记录</div>';
+        }
+
+        function filterChatHistory(keyword) {
+            renderChatHistory(keyword);
+        }
+
+        function loadChatHistory(id, silent = false) {
+            const session = state.chat.sessions.find(item => item.id === id);
+            if (!session) return;
+            state.chat.activeSessionId = id;
+            renderChatHistory(document.getElementById('chat-history-search').value || '');
+            renderChatMessages(session.messages);
+            setQAStatus('已加载历史对话：' + session.title, 'info');
+            if (!silent) showToast('历史对话已加载', 'info');
+        }
+
+        function clearChatHistory() {
+            state.chat.sessions = [];
+            state.chat.activeSessionId = null;
+            document.getElementById('chat-messages').innerHTML = '<div class="text-center text-sm text-gray-400 mt-10">暂无对话，请点击“新建对话”开始提问。</div>';
+            renderChatHistory(document.getElementById('chat-history-search').value || '');
+            setQAStatus('历史记录已清空，请开始新的问题。', 'warning');
+            showToast('对话历史已清空', 'warning');
+        }
+
+        function startNewChat() {
+            const id = 'chat-' + Date.now();
+            const session = {
+                id,
+                title: '新对话',
+                timeLabel: '刚刚',
+                messages: [
+                    { type: 'assistant', text: '您好！我是您的智能需求助手。您可以询问关于ZIPC状态变迁矩阵、需求文档解析或知识库管理的任何问题。' }
+                ]
+            };
+            state.chat.sessions.unshift(session);
+            state.chat.activeSessionId = id;
+            renderChatHistory();
+            renderChatMessages(session.messages);
+            setQAStatus('新对话已创建，可立即提问。', 'success');
+            showToast('新对话已开始', 'success');
+        }
+
         function sendMessage() {
             const input = document.getElementById('chat-input');
             const text = input.value.trim();
-            if (!text) return;
+            if (!text || state.chat.isTyping) return;
 
-            // 添加用户消息
-            addMessage(text, 'user');
+            if (!state.chat.activeSessionId) startNewChat();
+
+            const session = state.chat.sessions.find(item => item.id === state.chat.activeSessionId);
+            if (!session) return;
+
+            session.messages.push({ type: 'user', text });
+            if (session.title === '新对话') {
+                session.title = text.slice(0, 18) + (text.length > 18 ? '...' : '');
+            }
+            session.timeLabel = '刚刚';
+            renderChatHistory(document.getElementById('chat-history-search').value || '');
+            renderChatMessages(session.messages);
             input.value = '';
 
-            // 模拟AI思考
             state.chat.isTyping = true;
-            const thinkingId = addThinkingIndicator();
+            setQAStatus('处理中：正在检索知识库并生成答案...', 'info');
+            const thinkingId = addThinkingIndicator('处理中：知识检索中（术语库 / 规范文档）');
 
-            // 模拟网络延迟和流式响应
+            setTimeout(() => {
+                updateThinkingIndicator(thinkingId, '处理中：答案生成中（语义融合）');
+            }, 600);
+
             setTimeout(() => {
                 removeMessage(thinkingId);
-                streamAIResponse(text);
-            }, 1000);
+                const answer = buildAnswer(text);
+                session.messages.push({ type: 'assistant', answer });
+                renderChatMessages(session.messages);
+                setQAStatus(answer.isUnknown ? '已完成：该问题超出知识库范围。' : '已完成：已返回答案与溯源引用。', answer.isUnknown ? 'warning' : 'success');
+                state.chat.isTyping = false;
+            }, 1400);
+        }
+
+        function buildAnswer(question) {
+            const q = question.toLowerCase();
+            if (q.includes('复合状态')) {
+                return {
+                    text: '复合状态（Composite State）是包含多个子状态的父状态结构。\n\n它适合用于表达“阶段-步骤”类行为，可将复杂流程拆分到层级状态中，并保持状态转移规则清晰。',
+                    sources: [
+                        { label: '《ZIPC术语定义》- 2.3 复合状态', href: '#', tag: '术语库' },
+                        { label: '《ZIPC操作手册》- 4.1 分层状态建模', href: '#', tag: '操作手册' }
+                    ]
+                };
+            }
+            if (q.includes('状态转移函数') || q.includes('转移函数')) {
+                return {
+                    text: '状态转移函数用于定义在触发事件和守卫条件满足时，状态如何从当前节点迁移到目标节点。\n\n常见表达：δ(s, e, g) -> s\'。通过该函数可以对流程正确性进行形式化校验。',
+                    sources: [
+                        { label: '《ZIPC模型规范》- 3.2 状态转移函数', href: '#', tag: '规范文档' },
+                        { label: '《术语手册》- 转移规则', href: '#', tag: '术语库' }
+                    ]
+                };
+            }
+            if (q.includes('zipc') || q.includes('状态机') || q.includes('术语')) {
+                return {
+                    text: '该问题与 ZIPC 建模相关。建议优先从“状态定义 -> 事件触发 -> 守卫条件 -> 转移结果”四个维度描述需求，我可以继续帮您细化为可执行的状态机设计。',
+                    sources: [
+                        { label: '《ZIPC建模指南》- 快速问答模板', href: '#', tag: '建模指南' }
+                    ]
+                };
+            }
+            return {
+                isUnknown: true,
+                text: '该问题超出了当前 ZIPC 需求建模知识库的范围。\n\n我目前主要支持 ZIPC 建模、状态机设计、术语定义与规范解释。建议参考相关领域资料或咨询对应专家。',
+                sources: [
+                    { label: '知识范围说明', href: '#', tag: '系统提示' }
+                ]
+            };
+        }
+
+        function renderChatMessages(messages) {
+            const container = document.getElementById('chat-messages');
+            container.innerHTML = '';
+            messages.forEach(msg => {
+                if (msg.type === 'assistant' && msg.answer) {
+                    addAssistantAnswer(msg.answer);
+                } else {
+                    addMessage(msg.text, msg.type);
+                }
+            });
+            container.scrollTop = container.scrollHeight;
         }
 
         function addMessage(text, type) {
             const container = document.getElementById('chat-messages');
             const div = document.createElement('div');
             div.className = `flex items-start gap-4 fade-in ${type === 'user' ? 'flex-row-reverse' : ''}`;
-            
-            const avatar = type === 'user' 
+
+            const avatar = type === 'user'
                 ? '<div class="w-10 h-10 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center flex-shrink-0"><i class="fas fa-user"></i></div>'
                 : '<div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-robot"></i></div>';
-            
+
             const bubbleClass = type === 'user'
                 ? 'bg-primary text-white rounded-tr-none'
                 : 'bg-white text-gray-700 rounded-tl-none border border-gray-100 shadow-sm';
 
-            div.innerHTML = `
-                ${avatar}
-                <div class="${bubbleClass} p-4 rounded-2xl max-w-[80%] text-sm leading-relaxed">
-                    ${type === 'user' ? text : '<span class="typing-cursor"></span>'}
-                </div>
-            `;
-            
+            div.innerHTML = `${avatar}<div class="${bubbleClass} p-4 rounded-2xl max-w-[80%] text-sm leading-relaxed whitespace-pre-line">${escapeHtml(text)}</div>`;
             container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
-            return div.querySelector('.typing-cursor') || div; // 返回游标元素用于流式输出或用户消息的div
+            return div;
         }
 
-        function addThinkingIndicator() {
+        function addAssistantAnswer(answer) {
+            const container = document.getElementById('chat-messages');
+            const sourceHtml = (answer.sources || []).map(src => `
+                <a href="${src.href}" onclick="event.preventDefault();showToast('演示数据：可接入文档详情页', 'info')" class="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100 transition">
+                    <i class="fas fa-link"></i>${escapeHtml(src.tag)} · ${escapeHtml(src.label)}
+                </a>
+            `).join('');
+
+            const div = document.createElement('div');
+            div.className = 'flex items-start gap-4 fade-in';
+            div.innerHTML = `
+                <div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-robot"></i></div>
+                <div class="bg-white text-gray-700 rounded-tl-none border border-gray-100 shadow-sm p-4 rounded-2xl max-w-[80%] text-sm leading-relaxed">
+                    <div class="whitespace-pre-line">${escapeHtml(answer.text)}</div>
+                    <div class="mt-3 pt-3 border-t border-gray-100">
+                        <div class="text-xs text-gray-500 mb-2"><i class="fas fa-bookmark mr-1"></i>知识来源</div>
+                        <div class="flex flex-wrap gap-2">${sourceHtml || '<span class="text-xs text-gray-400">暂无来源</span>'}</div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+        }
+
+        function addThinkingIndicator(text) {
             const container = document.getElementById('chat-messages');
             const id = 'thinking-' + Date.now();
             const div = document.createElement('div');
@@ -1786,7 +1969,7 @@
             div.innerHTML = `
                 <div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-robot"></i></div>
                 <div class="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 text-sm text-gray-500">
-                    <i class="fas fa-circle-notch fa-spin mr-2"></i>正在思考中…
+                    <i class="fas fa-circle-notch fa-spin mr-2"></i><span class="thinking-text">${escapeHtml(text)}</span>
                 </div>
             `;
             container.appendChild(div);
@@ -1794,58 +1977,35 @@
             return id;
         }
 
+        function updateThinkingIndicator(id, text) {
+            const el = document.getElementById(id);
+            const textEl = el?.querySelector('.thinking-text');
+            if (textEl) textEl.textContent = text;
+        }
+
         function removeMessage(id) {
             const el = document.getElementById(id);
             if (el) el.remove();
         }
 
-        function streamAIResponse(userQuery) {
-            const responseText = `根据您关于"${userQuery}"的问题，基于ZIPC状态变迁模型的分析如下：\n\n首先，该状态转移必须满足前置条件校验。在Temperature参数设置为${state.zipc.temp}的情况下，系统的推理路径倾向于选择确定性最高的分支。\n\n具体来说，如果涉及到"非法状态转移"，系统会自动拦截并提示错误。例如，不允许从'等待'直接跳至'完成'。\n\n建议您检查需求文档中的第3.2节定义。\n\n[引用:1]`;
-            
-            // 创建消息容器
-            const container = document.getElementById('chat-messages');
-            const div = document.createElement('div');
-            div.className = `flex items-start gap-4 fade-in`;
-            div.innerHTML = `
-                <div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center flex-shrink-0"><i class="fas fa-robot"></i></div>
-                <div class="bg-white text-gray-700 rounded-tl-none border border-gray-100 shadow-sm p-4 rounded-2xl max-w-[80%] text-sm leading-relaxed">
-                    <span id="streaming-text" class="typing-cursor"></span>
-                </div>
-            `;
-            container.appendChild(div);
-
-            const textSpan = div.querySelector('#streaming-text');
-            let i = 0;
-            
-            const interval = setInterval(() => {
-                textSpan.textContent += responseText.charAt(i);
-                container.scrollTop = container.scrollHeight;
-                i++;
-                if (i >= responseText.length) {
-                    clearInterval(interval);
-                    textSpan.classList.remove('typing-cursor');
-                    state.chat.isTyping = false;
-                }
-            }, 30); // 打字速度
+        function setQAStatus(text, type = 'info') {
+            const bar = document.getElementById('qa-status-bar');
+            const colorMap = {
+                info: 'bg-blue-50 text-blue-700 border-blue-100',
+                success: 'bg-green-50 text-green-700 border-green-100',
+                warning: 'bg-amber-50 text-amber-700 border-amber-100'
+            };
+            bar.className = `px-6 py-2 border-b text-sm ${colorMap[type] || colorMap.info}`;
+            bar.innerHTML = `<i class="fas fa-circle-info mr-1"></i> ${escapeHtml(text)}`;
         }
 
-        function loadChatHistory(id) {
-            // 模拟加载历史聊天记录
-            showToast('正在加载历史对话...', 'info');
-        }
-
-        function startNewChat() {
-            document.getElementById('chat-messages').innerHTML = `
-                <div class="flex items-start gap-4">
-                    <div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center flex-shrink-0">
-                        <i class="fas fa-robot"></i>
-                    </div>
-                    <div class="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 max-w-[80%]">
-                        <p class="text-gray-700 text-sm leading-relaxed">您好！我是您的智能需求助手。您可以询问关于ZIPC状态变迁矩阵、需求文档解析或知识库管理的任何问题。</p>
-                    </div>
-                </div>
-            `;
-            showToast('新对话已开始', 'success');
+        function escapeHtml(text) {
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
         }
 
         // --- 知识管理模块逻辑 ---
