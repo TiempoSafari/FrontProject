@@ -372,14 +372,13 @@
 </div>
 <!-- 可视化内容 -->
 <div class="flex-1 overflow-hidden relative p-4">
+<div class="hidden" id="sankey-chart" aria-hidden="true"></div>
 <!-- 加载覆盖层 -->
 <div class="absolute inset-0 bg-white/80 z-20 hidden flex-col items-center justify-center" id="zipc-loading">
 <div class="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
 <span class="text-primary font-medium">正在生成状态变迁矩阵...</span>
 </div>
-<!-- Sankey图容器 -->
-<div class="w-full h-[58%] bg-white rounded-xl shadow-sm border border-gray-200" id="sankey-chart"></div>
-<div class="mt-3 h-[42%] bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+<div class="h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
 <div class="px-4 py-2 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
 <span class="text-sm font-semibold text-gray-700">SEAT模型表格视图</span>
 <button class="text-xs text-primary hover:underline" onclick="openExportConfig()">导出配置</button>
