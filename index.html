@@ -372,14 +372,13 @@
 </div>
 <!-- 可视化内容 -->
 <div class="flex-1 overflow-hidden relative p-4">
+<div class="hidden" id="sankey-chart" aria-hidden="true"></div>
 <!-- 加载覆盖层 -->
 <div class="absolute inset-0 bg-white/80 z-20 hidden flex-col items-center justify-center" id="zipc-loading">
 <div class="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
 <span class="text-primary font-medium">正在生成状态变迁矩阵...</span>
 </div>
-<!-- Sankey图容器 -->
-<div class="w-full h-[58%] bg-white rounded-xl shadow-sm border border-gray-200" id="sankey-chart"></div>
-<div class="mt-3 h-[42%] bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+<div class="h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
 <div class="px-4 py-2 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
 <span class="text-sm font-semibold text-gray-700">SEAT模型表格视图</span>
 <button class="text-xs text-primary hover:underline" onclick="openExportConfig()">导出配置</button>
@@ -1416,6 +1415,7 @@
             initKnowledgeGraph();
             initQAModule();
             renderVersionHistory();
+            renderSeatTable();
 
             // 处理窗口大小调整
             window.addEventListener('resize', () => {
@@ -1648,22 +1648,60 @@
             renderStatePath(pathSequence);
         }
 
-        function renderSeatTable(tableKey='主表0') {
-            const table = zipcSeatDemo[tableKey];
-            const states = table.S.map(s => s.name);
-            const events = table.E;
-            let html = '<table class="min-w-full text-xs"><thead><tr class="bg-gray-50"><th class="px-3 py-2 text-left border-b">事件 / 状态</th>' + states.map(s=>`<th class="px-3 py-2 text-left border-b">${s}</th>`).join('') + '</tr></thead><tbody>';
-            events.forEach(e=>{
-                html += `<tr><td class="px-3 py-2 border-b font-medium text-gray-700">${e}</td>`;
-                states.forEach(st=>{
-                    const cell = table.SEAT[e]?.[st];
-                    const val = cell ? `T:${cell.T}<br>A:${cell.A.join('、')}` : 'null';
-                    html += `<td class="px-3 py-2 border-b text-gray-600">${val}</td>`;
+        function renderSeatTable() {
+            const tableKeys = ['主表0', '子表0.1'];
+            const cardHtml = tableKeys.map((tableKey) => {
+                const table = zipcSeatDemo[tableKey];
+                const states = table.S.map(s => s.name);
+                const events = table.E;
+
+                const metaTags = [
+                    `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-50 text-blue-700">初始状态：${table.meta.initial}</span>`,
+                    table.meta.parent ? `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-violet-50 text-violet-700">父状态：${table.meta.parent}</span>` : ''
+                ].join('');
+
+                const symbolRows = table.meta.symbols
+                    ? Object.entries(table.meta.symbols).map(([kind, mapObj]) => {
+                        const symbolText = Object.entries(mapObj).map(([symbol, desc]) => `<span class="mr-3"><code class="px-1 py-0.5 bg-gray-100 rounded">${symbol}</code> ${desc}</span>`).join('');
+                        return `<div><span class="font-semibold text-gray-600 mr-2">${kind}符号：</span>${symbolText}</div>`;
+                    }).join('')
+                    : '';
+
+                let tableHtml = `<table class="min-w-full text-xs md:text-sm"><thead><tr class="bg-gray-50 text-gray-700"><th class="sticky left-0 bg-gray-50 z-10 px-3 py-2 text-left border-b border-gray-200">事件 / 状态</th>${states.map(s=>`<th class="px-3 py-2 text-left border-b border-gray-200 whitespace-nowrap">${s}</th>`).join('')}</tr></thead><tbody>`;
+
+                events.forEach((eventName, eventIndex) => {
+                    tableHtml += `<tr class="${eventIndex % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}">`;
+                    tableHtml += `<td class="sticky left-0 ${eventIndex % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'} px-3 py-2 border-b border-gray-100 font-medium text-gray-700 whitespace-nowrap">${eventName}</td>`;
+
+                    states.forEach((stateName) => {
+                        const cell = table.SEAT[eventName]?.[stateName];
+                        if (!cell) {
+                            tableHtml += '<td class="px-3 py-2 border-b border-gray-100 text-amber-600">未定义</td>';
+                            return;
+                        }
+                        const actionHtml = cell.A.map(a => `<span class="inline-block mr-1 mb-1 px-2 py-0.5 rounded bg-blue-50 text-blue-700">${a}</span>`).join('');
+                        const transitionBadge = `<span class="inline-block px-2 py-0.5 rounded bg-emerald-50 text-emerald-700">T: ${cell.T}</span>`;
+                        tableHtml += `<td class="px-3 py-2 border-b border-gray-100 text-gray-600"><div class="mb-1">${transitionBadge}</div><div>${actionHtml}</div></td>`;
+                    });
+
+                    tableHtml += '</tr>';
                 });
-                html += '</tr>';
-            });
-            html += '</tbody></table>';
-            document.getElementById('seat-table-container').innerHTML = html;
+
+                tableHtml += '</tbody></table>';
+
+                return `
+                    <section class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                        <div class="flex flex-wrap items-center gap-2 mb-2">
+                            <h4 class="text-sm md:text-base font-bold text-gray-800">${tableKey} · ${table.meta.title || ''}</h4>
+                            ${metaTags}
+                        </div>
+                        ${table.meta.description ? `<p class="text-xs text-gray-500 mb-2">${table.meta.description}</p>` : ''}
+                        ${symbolRows ? `<div class="text-xs text-gray-500 mb-3 space-y-1">${symbolRows}</div>` : ''}
+                        <div class="overflow-auto border border-gray-100 rounded-lg">${tableHtml}</div>
+                    </section>`;
+            }).join('<div class="h-3"></div>');
+
+            document.getElementById('seat-table-container').innerHTML = `<div class="p-3 md:p-4 bg-gray-50 space-y-3">${cardHtml}</div>`;
         }
 
         function renderVersionHistory() {
