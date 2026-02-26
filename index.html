@@ -1252,8 +1252,7 @@
 <div><label class="block text-sm mb-1">重要级别</label><input class="w-full border border-gray-300 rounded px-3 py-2 text-sm" value="P1"/></div>
 <div><label class="block text-sm mb-1">同义词</label><input id="term-synonyms" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" value="状态节点定义, 状态判定"/></div>
 <div><label class="block text-sm mb-1">相关术语</label><input id="term-related" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" value="转移规则, 事件驱动"/></div>
-<div class="md:col-span-2"><label class="block text-sm mb-1">使用示例</label><textarea id="term-example" class="w-full border border-gray-300 rounded px-3 py-2 text-sm h-16">待机 -> 运行 -> 停机</textarea></div>
-<div class="md:col-span-2"><label class="block text-sm mb-1">适用范围/注释</label><textarea id="term-scope" class="w-full border border-gray-300 rounded px-3 py-2 text-sm h-16">适用于ZIPC建模与评审规范文档。</textarea></div>
+<div class="md:col-span-2"><label class="block text-sm mb-1">词条富文本内容（Wikipedia 工程术语全文演示）</label><div id="term-rich-editor" contenteditable="true" class="w-full border border-gray-300 rounded px-3 py-2 text-sm h-56 overflow-y-auto leading-6 bg-white"></div></div>
 </div>
 <div class="p-4 border-t border-gray-200 flex justify-end gap-3 bg-gray-50"><button class="px-4 py-2 text-sm text-gray-600" onclick="closeKnowledgeModal()">取消</button><button class="px-4 py-2 text-sm bg-primary text-white rounded" onclick="saveKnowledge()">保存更改</button></div>
 </div></div>
@@ -2153,17 +2152,37 @@
             renderKnowledgeEntries();
         }
 
+
+        function buildWikiFullHtml(entry) {
+            return `
+                <h4><b>${entry.title}</b></h4>
+                <p><b>定义：</b>${entry.definition}</p>
+                <p><b>别名：</b>${entry.alias}</p>
+                <p><b>相关术语：</b>${entry.related}</p>
+                <hr/>
+                ${entry.contentHtml}
+                <p><b>历史与发展：</b>该术语在工程实践中随软件规模化与系统复杂度提升而不断演进。社区通常通过标准化流程、工具链与最佳实践沉淀，降低理解偏差与实施成本。</p>
+                <p><b>典型应用：</b>在企业级研发体系中，该概念常与需求管理、版本控制、自动化测试、持续交付和质量治理协同使用，形成可追踪、可审计的工程闭环。</p>
+                <p><b>实现要点：</b>建议在组织内建立统一术语词典，明确语义边界、输入输出、度量指标和反模式，避免“同名异义”导致的跨团队沟通损耗。</p>
+                <p><b>争议与局限：</b>不同业务场景对该术语的采纳深度不同，若机械套用而忽视组织成熟度，可能带来流程负担、协作摩擦或短期效率下降。</p>
+                <p><b>实践建议：</b>从最小可行实践开始，小步验证并持续回顾，以数据驱动方式校正落地策略；同时结合领域上下文逐步扩展规范范围。</p>
+                <p><b>参考维度：</b>范围定义、职责边界、依赖关系、质量标准、成本与收益、风险控制、演进路径。</p>
+            `;
+        }
+
         function openTermDetail(isEdit = false, entryId = null) {
             const modal = document.getElementById('knowledge-modal');
             modal.classList.remove('hidden');
-            if (!isEdit) return;
+            if (!isEdit) {
+                document.getElementById('term-rich-editor').innerHTML = "<p><b>请在此编辑词条富文本内容。</b></p><p>支持粘贴段落、列表和强调样式，用于演示Wikipedia风格工程术语全文。</p>";
+                return;
+            }
             const entry = knowledgeDemoData.entries.find(item => item.id === entryId) || knowledgeDemoData.entries[0];
             document.getElementById('term-title').value = entry.title;
             document.getElementById('term-definition').value = entry.definition;
             document.getElementById('term-synonyms').value = entry.alias;
             document.getElementById('term-related').value = entry.related;
-            document.getElementById('term-example').value = entry.contentHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-            document.getElementById('term-scope').value = `分类：${entry.category}；来源：工程术语百科演示数据`;
+            document.getElementById('term-rich-editor').innerHTML = buildWikiFullHtml(entry);
         }
 
         function openKnowledgeBatchImport() { document.getElementById('knowledge-import-modal').classList.remove('hidden'); }
