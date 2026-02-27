@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZIPC 系统 - 用户登录与认证演示</title>
+  <script src="https://image.uc.cn/s/uae/g/3n/mos-production/fontawesome-free-7.1.0-web/js/all.min.js"></script>
+  <script src="https://image.uc.cn/s/uae/g/3n/mos-production/0915/3.4.17.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { primary: '#3B82F6', bgLight: '#F9FAFB' },
+          fontFamily: { sans: ['"Microsoft YaHei"', '"Segoe UI"', 'Arial', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-bgLight text-gray-800 font-sans min-h-screen">
+  <div class="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+    <section class="w-full max-w-xl">
+      <div class="flex items-center gap-3 mb-6 justify-center">
+        <div class="w-11 h-11 bg-primary text-white rounded-lg flex items-center justify-center"><i class="fas fa-network-wired"></i></div>
+        <div>
+          <h1 class="text-xl font-bold">ZIPC 状态变迁矩阵系统</h1>
+          <p class="text-sm text-gray-500">用户登录与认证流程演示（图 5.51）</p>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+        <h2 class="text-lg font-bold mb-4">统一身份认证入口</h2>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">用户名</label>
+            <input id="username" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary outline-none" value="admin_zipc" />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-600 mb-1">密码</label>
+            <div class="relative">
+              <input id="password" type="password" class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary outline-none" value="P@ssw0rd!" />
+              <button type="button" class="absolute right-3 top-2.5 text-gray-400" onclick="togglePwd()"><i id="pwd-icon" class="fas fa-eye"></i></button>
+            </div>
+          </div>
+          <div class="flex items-center justify-between text-sm">
+            <label class="flex items-center gap-2 text-gray-500"><input type="checkbox" checked /> 记住设备</label>
+            <a href="#" class="text-primary hover:underline">忘记密码？</a>
+          </div>
+          <button id="login-btn" onclick="startAuthFlow()" class="w-full bg-primary hover:bg-blue-600 text-white font-semibold py-2.5 rounded-lg transition">
+            <i class="fas fa-shield-halved mr-1"></i>登录并发起认证
+          </button>
+          <div id="login-result" class="text-sm text-gray-500 bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">状态：等待认证</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    function togglePwd() {
+      const input = document.getElementById('password');
+      const icon = document.getElementById('pwd-icon');
+      const show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      icon.className = show ? 'fas fa-eye-slash' : 'fas fa-eye';
+    }
+
+    function startAuthFlow() {
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const result = document.getElementById('login-result');
+      const btn = document.getElementById('login-btn');
+      if (!username || !password) {
+        result.className = 'text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 border border-red-200';
+        result.textContent = '状态：请输入用户名和密码。';
+        return;
+      }
+      btn.disabled = true;
+      btn.classList.add('opacity-70', 'cursor-not-allowed');
+      result.className = 'text-sm text-blue-700 bg-blue-50 rounded-lg px-3 py-2 border border-blue-200';
+      result.textContent = '状态：认证授权服务校验中（TLS 通道传输）...';
+      setTimeout(() => {
+        result.className = 'text-sm text-emerald-700 bg-emerald-50 rounded-lg px-3 py-2 border border-emerald-200';
+        result.textContent = `状态：登录成功，JWT 已签发（用户：${username}）。`;
+        btn.disabled = false;
+        btn.classList.remove('opacity-70', 'cursor-not-allowed');
+      }, 1200);
+    }
+  </script>
+</body>
+</html>
